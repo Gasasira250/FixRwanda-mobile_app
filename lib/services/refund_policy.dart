@@ -1,10 +1,5 @@
 import '../models/booking.dart';
 
-/// Cancellation and refund rules for FixRwanda.
-///
-/// The live API is the source of truth. This class is used for offline
-/// mode and Flutter unit tests, and it must stay in lockstep with
-/// `backend/src/refunds.js`.
 class RefundPolicy {
   static const transportFeeRwf = 2000;
 

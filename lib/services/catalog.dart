@@ -2,9 +2,8 @@ import '../models/booking.dart';
 import '../models/professional.dart';
 import 'refund_policy.dart';
 
-/// Offline catalogue used when the REST API is unreachable.
-class DemoCatalog {
-  DemoCatalog() {
+class Catalog {
+  Catalog() {
     bookings.addAll(_seedBookings());
     _sequence = bookings.length + 1;
   }

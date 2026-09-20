@@ -34,7 +34,7 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = Number(process.env.PORT || 4000);
-const JWT_SECRET = process.env.JWT_SECRET || 'fixrwanda-interview-secret';
+const JWT_SECRET = process.env.JWT_SECRET || 'fixrwanda-dev-secret';
 
 app.use(cors());
 app.use(express.json());

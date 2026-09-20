@@ -23,7 +23,7 @@ services:
       - "4000:4000"
     environment:
       PORT: 4000
-      JWT_SECRET: fixrwanda-interview-secret
+      JWT_SECRET: fixrwanda-dev-secret
       DATABASE_URL: postgres://fixrwanda:fixrwanda@db:5432/fixrwanda
     depends_on:
       db:

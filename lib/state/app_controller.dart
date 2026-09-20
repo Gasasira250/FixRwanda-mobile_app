@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/booking.dart';
 import '../models/professional.dart';
 import '../services/api_client.dart';
-import '../services/demo_catalog.dart';
+import '../services/catalog.dart';
 import '../services/session_store.dart';
 
 class FixRwandaScope extends InheritedNotifier<AppController> {

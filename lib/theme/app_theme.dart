@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 
 import '../models/booking.dart';
 
-/// FixRwanda design system — Rwanda Deep Blue, Sun Yellow, Kigali Green.
 class AppColors {
   static const Color primaryBlue = Color(0xFF0052B4);
   static const Color sunYellow = Color(0xFFFAD201);

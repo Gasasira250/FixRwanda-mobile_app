@@ -5,25 +5,18 @@ import 'package:http/http.dart' as http;
 
 import '../models/booking.dart';
 import '../models/professional.dart';
-import 'demo_catalog.dart';
+import 'catalog.dart';
 
-/// REST client for FixRwanda.
-///
-/// Production path: Flutter → Express API → PostgreSQL.
-/// If the API is down, the same methods fall back to [DemoCatalog].
 class ApiClient {
   ApiClient({
     http.Client? httpClient,
     String? baseUrl,
-    DemoCatalog? catalog,
+    Catalog? catalog,
   }) : _http = httpClient ?? http.Client(),
-       catalog = catalog ?? DemoCatalog() {
+       catalog = catalog ?? Catalog() {
     this.baseUrl = baseUrl ?? resolveBaseUrl();
   }
 
-  /// Android emulator reaches the host at 10.0.2.2.
-  /// A physical phone uses LAN_IP (default 192.168.1.9) or API_BASE.
-  /// Override with --dart-define=API_BASE=http://YOUR_LAN_IP:4000/api
   static String resolveBaseUrl() {
     const fromEnv = String.fromEnvironment('API_BASE');
     if (fromEnv.isNotEmpty) return fromEnv;
@@ -67,7 +60,7 @@ class ApiClient {
 
   final http.Client _http;
   late String baseUrl;
-  final DemoCatalog catalog;
+  final Catalog catalog;
 
   bool online = false;
   String? token;
@@ -211,7 +204,7 @@ class ApiClient {
           .toList();
     } catch (_) {
       online = false;
-      return DemoCatalog.categories;
+      return Catalog.categories;
     }
   }
 

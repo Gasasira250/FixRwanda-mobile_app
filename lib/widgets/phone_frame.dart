@@ -1,8 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-/// Desktop/web chassis that presents the app as a phone.
-/// Real Android and iOS devices skip this and run full-screen.
 class PhoneFrame extends StatelessWidget {
   const PhoneFrame({super.key, required this.child});
 

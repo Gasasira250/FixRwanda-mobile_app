@@ -33,7 +33,7 @@ class StatusTimeline extends StatelessWidget {
               alignment: Alignment.centerLeft,
               height: 18,
               width: 2,
-              color: currentIndex > i ? AppColors.sky : AppColors.line,
+              color: currentIndex > i ? AppColors.primaryBlue : AppColors.line,
             ),
         ],
       ],
@@ -72,14 +72,22 @@ class _StepRow extends StatelessWidget {
           height: 24,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: done ? AppColors.sky : Colors.white,
+            color: done
+                ? (current ? AppColors.sunYellow : AppColors.primaryBlue)
+                : Colors.white,
             border: Border.all(
-              color: done ? AppColors.sky : AppColors.line,
+              color: done
+                  ? (current ? AppColors.sunYellow : AppColors.primaryBlue)
+                  : AppColors.line,
               width: 2,
             ),
           ),
           child: done
-              ? const Icon(Icons.check, size: 14, color: Colors.white)
+              ? Icon(
+                  Icons.check,
+                  size: 14,
+                  color: current ? AppColors.skyDark : Colors.white,
+                )
               : null,
         ),
         const SizedBox(width: 12),
@@ -88,7 +96,7 @@ class _StepRow extends StatelessWidget {
           style: TextStyle(
             fontWeight: current ? FontWeight.w800 : FontWeight.w600,
             color: current
-                ? AppColors.skyDark
+                ? AppColors.primaryBlue
                 : done
                 ? AppColors.ink
                 : AppColors.muted,

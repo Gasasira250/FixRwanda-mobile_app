@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../state/app_controller.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_surfaces.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, this.startOnSignUp = false});
@@ -60,7 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
           content: Text(
             _isSignUp ? 'Account created successfully' : 'Login successful',
           ),
-          backgroundColor: AppColors.green,
+          backgroundColor: AppColors.kigaliGreen,
         ),
       );
       Navigator.of(context).pushNamedAndRemoveUntil('/home', (_) => false);
@@ -78,197 +79,208 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final app = FixRwandaScope.of(context);
     return Scaffold(
-      backgroundColor: AppColors.cream,
-      body: SafeArea(
-        child: ListenableBuilder(
-          listenable: app,
-          builder: (context, _) {
-            return Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 400),
-                  child: Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 15,
-                          offset: const Offset(0, 5),
+      backgroundColor: AppColors.backgroundLight,
+      body: ListenableBuilder(
+        listenable: app,
+        builder: (context, _) {
+          return Column(
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(24, 36, 24, 24),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppColors.skyDark, AppColors.primaryBlue],
+                  ),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(32),
+                    bottomRight: Radius.circular(32),
+                  ),
+                ),
+                child: SafeArea(
+                  bottom: false,
+                  child: Column(
+                    children: [
+                    const BrandMark(size: 56),
+                    const SizedBox(height: 12),
+                      const Text(
+                        'FixRwanda',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
                         ),
-                      ],
-                    ),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const Icon(
-                            Icons.build_circle,
-                            size: 56,
-                            color: AppColors.tab,
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            _isSignUp ? 'Create Account' : 'Welcome Back',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _isSignUp
+                            ? 'Create an account to book verified help'
+                            : 'Sign in to access your account',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Color(0xFFD6E6F7),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: SurfaceCard(
+                      padding: const EdgeInsets.all(18),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              _isSignUp ? 'Create Account' : 'Welcome Back',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.darkSlate,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            _isSignUp
-                                ? 'Sign up to manage and book services'
-                                : 'Sign in to access your account',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontSize: 13,
-                            ),
-                          ),
-                          const SizedBox(height: 28),
-                          if (_isSignUp) ...[
-                            TextFormField(
-                              controller: _name,
-                              textCapitalization: TextCapitalization.words,
-                              decoration: InputDecoration(
-                                labelText: 'Full name',
-                                prefixIcon: const Icon(Icons.person_outline),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
+                            const SizedBox(height: 22),
+                            if (_isSignUp) ...[
+                              TextFormField(
+                                controller: _name,
+                                textCapitalization: TextCapitalization.words,
+                                decoration: const InputDecoration(
+                                  labelText: 'Full name',
+                                  prefixIcon: Icon(Icons.person_outline),
                                 ),
+                                validator: (value) {
+                                  if (!_isSignUp) return null;
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Please enter your name';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                            TextFormField(
+                              controller: _email,
+                              keyboardType: TextInputType.emailAddress,
+                              decoration: const InputDecoration(
+                                labelText: 'Email Address',
+                                hintText: 'you@email.com',
+                                prefixIcon: Icon(Icons.email_outlined),
                               ),
                               validator: (value) {
-                                if (!_isSignUp) return null;
                                 if (value == null || value.trim().isEmpty) {
-                                  return 'Please enter your name';
+                                  return 'Please enter your email';
+                                }
+                                final trimmed = value.trim();
+                                final phone = RegExp(r'^\+?\d{8,15}$');
+                                if (!trimmed.contains('@') &&
+                                    !phone.hasMatch(trimmed)) {
+                                  return 'Please enter a valid email address';
                                 }
                                 return null;
                               },
                             ),
                             const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _password,
+                              obscureText: _obscurePassword,
+                              textInputAction: TextInputAction.done,
+                              onFieldSubmitted: (_) {
+                                if (!app.busy) _submit(app);
+                              },
+                              decoration: InputDecoration(
+                                labelText: 'Password',
+                                prefixIcon: const Icon(Icons.lock_outline),
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscurePassword
+                                        ? Icons.visibility_off
+                                        : Icons.visibility,
+                                    color: AppColors.muted,
+                                  ),
+                                  onPressed: () => setState(
+                                    () => _obscurePassword = !_obscurePassword,
+                                  ),
+                                ),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Please enter your password';
+                                }
+                                if (value.length < 6) {
+                                  return 'Password must be at least 6 characters';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 24),
+                            SizedBox(
+                              height: 50,
+                              child: ElevatedButton(
+                                onPressed: app.busy
+                                    ? null
+                                    : () => _submit(app),
+                                child: app.busy
+                                    ? const SizedBox(
+                                        width: 22,
+                                        height: 22,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : Text(
+                                        _isSignUp ? 'Sign Up' : 'Sign In',
+                                      ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            TextButton(
+                              onPressed: app.busy
+                                  ? null
+                                  : () {
+                                      setState(() {
+                                        _isSignUp = !_isSignUp;
+                                        _formKey.currentState?.reset();
+                                      });
+                                    },
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 0,
+                                  vertical: 8,
+                                ),
+                              ),
+                              child: Text(
+                                _isSignUp
+                                    ? 'Already have an account? Sign In'
+                                    : "Don't have an account? Sign Up",
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: AppColors.primaryBlue,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
                           ],
-                          TextFormField(
-                            controller: _email,
-                            keyboardType: TextInputType.emailAddress,
-                            decoration: InputDecoration(
-                              labelText: 'Email Address',
-                              hintText: 'you@email.com or 0780000000',
-                              prefixIcon: const Icon(Icons.email_outlined),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Please enter your email';
-                              }
-                              final trimmed = value.trim();
-                              final phone = RegExp(r'^\+?\d{8,15}$');
-                              if (!trimmed.contains('@') &&
-                                  !phone.hasMatch(trimmed)) {
-                                return 'Please enter a valid email address';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          TextFormField(
-                            controller: _password,
-                            obscureText: _obscurePassword,
-                            decoration: InputDecoration(
-                              labelText: 'Password',
-                              prefixIcon: const Icon(Icons.lock_outline),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility_off
-                                      : Icons.visibility,
-                                ),
-                                onPressed: () => setState(
-                                  () => _obscurePassword = !_obscurePassword,
-                                ),
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Please enter your password';
-                              }
-                              if (value.length < 6) {
-                                return 'Password must be at least 6 characters';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 24),
-                          SizedBox(
-                            height: 48,
-                            child: ElevatedButton(
-                              onPressed: app.busy ? null : () => _submit(app),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.tab,
-                                foregroundColor: Colors.white,
-                                minimumSize: const Size.fromHeight(48),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                              child: app.busy
-                                  ? const SizedBox(
-                                      width: 22,
-                                      height: 22,
-                                      child: CircularProgressIndicator(
-                                        color: Colors.white,
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : Text(
-                                      _isSignUp ? 'Sign Up' : 'Sign In',
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          TextButton(
-                            onPressed: app.busy
-                                ? null
-                                : () {
-                                    setState(() {
-                                      _isSignUp = !_isSignUp;
-                                      _formKey.currentState?.reset();
-                                    });
-                                  },
-                            child: Text(
-                              _isSignUp
-                                  ? 'Already have an account? Sign In'
-                                  : "Don't have an account? Sign Up",
-                              style: const TextStyle(
-                                color: AppColors.tab,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            );
-          },
-        ),
+            ],
+          );
+        },
       ),
     );
   }

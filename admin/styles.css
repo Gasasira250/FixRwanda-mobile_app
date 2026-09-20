@@ -1,12 +1,12 @@
 :root {
-  --sky: #0077b6;
-  --navy: #023e8a;
-  --green: #1b7a4e;
-  --gold: #f4c430;
-  --ink: #102033;
-  --muted: #5b6b7c;
-  --line: #dce4ee;
-  --bg: #f4f7fb;
+  --sky: #0052b4;
+  --navy: #003a82;
+  --green: #208a42;
+  --gold: #fad201;
+  --ink: #0f172a;
+  --muted: #64748b;
+  --line: #e2e8f0;
+  --bg: #f8fafc;
 }
 * { box-sizing: border-box; }
 body {
@@ -39,8 +39,14 @@ header {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
+  padding: 16px 18px;
+  background: linear-gradient(135deg, #003a82, #0052b4);
+  color: white;
+  border-radius: 14px;
 }
-header button { width: auto; margin: 0; background: white; color: var(--navy); border: 1px solid var(--line); }
+header strong { color: white; }
+header span { color: #d6e6f7; margin-left: 8px; }
+header button { width: auto; margin: 0; background: #fad201; color: #003a82; border: 0; }
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
 .stat, .card {
   background: white;

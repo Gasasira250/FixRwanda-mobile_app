@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../state/app_controller.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_surfaces.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -43,33 +44,48 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: AppColors.skyDark,
-      body: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircleAvatar(
-                radius: 42,
-                backgroundColor: AppColors.gold,
-                child: Icon(Icons.handyman, size: 42, color: AppColors.skyDark),
-              ),
-              SizedBox(height: 22),
-              Text(
-                'FixRwanda',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 32,
-                  fontWeight: FontWeight.w800,
+    return Scaffold(
+      body: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.skyDark, AppColors.primaryBlue],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const BrandMark(size: 84),
+                const SizedBox(height: 22),
+                const Text(
+                  'FixRwanda',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 32,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.3,
+                  ),
                 ),
-              ),
-              SizedBox(height: 8),
-              Text(
-                'Verified professionals, booked in minutes.',
-                style: TextStyle(color: Color(0xFFB8D4E8), fontSize: 15),
-              ),
-            ],
+                const SizedBox(height: 10),
+                Container(
+                  width: 56,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.sunYellow,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  'Verified professionals, booked in minutes.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Color(0xFFD6E6F7), fontSize: 15),
+                ),
+              ],
+            ),
           ),
         ),
       ),

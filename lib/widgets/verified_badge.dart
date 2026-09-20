@@ -16,7 +16,7 @@ class VerifiedBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final verified = professional.isVerifiedProfessional;
-    final color = verified ? AppColors.green : AppColors.warning;
+    final color = verified ? AppColors.kigaliGreen : AppColors.warning;
     final label = compact
         ? (verified ? 'Verified' : 'Pending')
         : professional.verificationLabel;

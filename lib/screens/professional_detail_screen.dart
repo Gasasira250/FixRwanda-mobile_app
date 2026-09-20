@@ -4,6 +4,7 @@ import '../models/professional.dart';
 import '../theme/app_theme.dart';
 import '../utils/format.dart';
 import '../utils/launchers.dart';
+import '../widgets/app_surfaces.dart';
 import '../widgets/verified_badge.dart';
 
 class ProfessionalDetailScreen extends StatelessWidget {
@@ -15,32 +16,46 @@ class ProfessionalDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final canBook = professional.isVerifiedProfessional;
     return Scaffold(
+      backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(title: const Text('Professional')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
         children: [
-          Text(
-            professional.name,
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+          SurfaceCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  professional.name,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.darkSlate,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '${professional.trade} • ${professional.location}',
+                  style: const TextStyle(color: AppColors.muted, fontSize: 16),
+                ),
+                const SizedBox(height: 12),
+                VerifiedBadge(professional: professional),
+              ],
+            ),
           ),
-          const SizedBox(height: 6),
-          Text(
-            '${professional.trade} • ${professional.location}',
-            style: const TextStyle(color: AppColors.muted, fontSize: 16),
-          ),
-          const SizedBox(height: 12),
-          VerifiedBadge(professional: professional),
           const SizedBox(height: 16),
           Row(
             children: [
               _Stat(
                 label: 'Rating',
                 value: professional.rating.toStringAsFixed(1),
+                accent: AppColors.sunYellow,
               ),
               _Stat(label: 'Jobs', value: '${professional.jobsCompleted}'),
               _Stat(
                 label: 'From',
                 value: formatRwf(professional.serviceFeeRwf),
+                accent: AppColors.primaryBlue,
               ),
             ],
           ),
@@ -88,11 +103,8 @@ class ProfessionalDetailScreen extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          const Text(
-            'Verification',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-          ),
+          const SizedBox(height: 24),
+          const SectionHeader(title: 'Verification'),
           const SizedBox(height: 8),
           Text(
             canBook
@@ -105,17 +117,11 @@ class ProfessionalDetailScreen extends StatelessWidget {
             'TVET: ${professional.tvetVerified ? 'verified' : 'not verified'}  •  National ID: ${professional.idVerified ? 'verified' : 'not verified'}',
           ),
           const SizedBox(height: 20),
-          const Text(
-            'About',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-          ),
+          const SectionHeader(title: 'About'),
           const SizedBox(height: 8),
           Text(professional.about, style: const TextStyle(height: 1.4)),
           const SizedBox(height: 20),
-          const Text(
-            'Services',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-          ),
+          const SectionHeader(title: 'Services'),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -142,10 +148,11 @@ class ProfessionalDetailScreen extends StatelessWidget {
 }
 
 class _Stat extends StatelessWidget {
-  const _Stat({required this.label, required this.value});
+  const _Stat({required this.label, required this.value, this.accent});
 
   final String label;
   final String value;
+  final Color? accent;
 
   @override
   Widget build(BuildContext context) {
@@ -156,13 +163,17 @@ class _Stat extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.line),
+          boxShadow: AppShadows.card,
         ),
         child: Column(
           children: [
             Text(
               value,
-              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 14,
+                color: accent ?? AppColors.darkSlate,
+              ),
             ),
             const SizedBox(height: 4),
             Text(label, style: const TextStyle(color: AppColors.muted)),

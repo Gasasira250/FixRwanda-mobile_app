@@ -77,6 +77,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(title: const Text('Payment')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
@@ -119,12 +120,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
             style: const TextStyle(
               fontSize: 32,
               fontWeight: FontWeight.w800,
-              color: AppColors.ink,
+              color: AppColors.primaryBlue,
             ),
           ),
           if (_ussdHint != null) ...[
             const SizedBox(height: 12),
-            Text(_ussdHint!, style: const TextStyle(color: AppColors.green)),
+            Text(_ussdHint!, style: const TextStyle(color: AppColors.kigaliGreen)),
           ],
           if (_error != null) ...[
             const SizedBox(height: 12),

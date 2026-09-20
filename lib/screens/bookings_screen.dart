@@ -4,6 +4,7 @@ import '../models/booking.dart';
 import '../state/app_controller.dart';
 import '../theme/app_theme.dart';
 import '../utils/format.dart';
+import '../widgets/app_surfaces.dart';
 
 class BookingsScreen extends StatelessWidget {
   const BookingsScreen({super.key});
@@ -16,15 +17,22 @@ class BookingsScreen extends StatelessWidget {
       builder: (context, _) {
         final upcoming = app.bookings.where((item) => item.isUpcoming).toList();
         final past = app.bookings.where((item) => item.isPast).toList();
-        return SafeArea(
+        return ColoredBox(
+          color: AppColors.backgroundLight,
+          child: SafeArea(
           child: RefreshIndicator(
+            color: AppColors.primaryBlue,
             onRefresh: app.refreshBookings,
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
               children: [
                 const Text(
                   'My bookings',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.darkSlate,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 if (app.bookings.isEmpty)
@@ -57,6 +65,7 @@ class BookingsScreen extends StatelessWidget {
               ],
             ),
           ),
+          ),
         );
       },
     );
@@ -70,24 +79,45 @@ class _BookingTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        title: Text(booking.professionalName),
-        subtitle: Text(
-          '${booking.service} • ${formatDateTime(booking.scheduledAt)}\n${booking.statusLabel}',
-        ),
-        isThreeLine: true,
-        trailing: Text(
-          formatRwf(booking.serviceFeeRwf),
-          style: const TextStyle(fontWeight: FontWeight.w700),
-        ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: SurfaceCard(
+        padding: EdgeInsets.zero,
         onTap: () {
           Navigator.of(context).pushNamed(
             '/booking-detail',
             arguments: booking.id,
           );
         },
+        child: ListTile(
+          contentPadding: const EdgeInsets.fromLTRB(16, 8, 12, 8),
+          title: Text(
+            booking.professionalName,
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${booking.service} • ${formatDateTime(booking.scheduledAt)}',
+                  style: const TextStyle(color: AppColors.muted, fontSize: 12),
+                ),
+                const SizedBox(height: 8),
+                StatusPill(status: booking.status, label: booking.statusLabel),
+              ],
+            ),
+          ),
+          isThreeLine: true,
+          trailing: Text(
+            formatRwf(booking.serviceFeeRwf),
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              color: AppColors.primaryBlue,
+            ),
+          ),
+        ),
       ),
     );
   }

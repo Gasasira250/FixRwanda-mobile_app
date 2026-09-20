@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary_blue">#0052B4</color>
+    <color name="sky_dark">#003A82</color>
+    <color name="sun_yellow">#FAD201</color>
+    <color name="kigali_green">#208A42</color>
+    <color name="background_light">#F8FAFC</color>
+    <color name="dark_slate">#0F172A</color>
+</resources>

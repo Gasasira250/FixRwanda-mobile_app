@@ -57,6 +57,7 @@ class _ProfessionalsScreenState extends State<ProfessionalsScreen> {
   Widget build(BuildContext context) {
     final title = widget.args.trade ?? 'Professionals';
     return Scaffold(
+      backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(title: Text(title)),
       body: Column(
         children: [

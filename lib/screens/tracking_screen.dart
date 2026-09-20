@@ -78,14 +78,14 @@ class _InAppTrackingScreenState extends State<InAppTrackingScreen> {
       case BookingStatus.cancelled:
         return AppColors.danger;
       case BookingStatus.completed:
-        return AppColors.green;
+        return AppColors.kigaliGreen;
       case BookingStatus.arrived:
       case BookingStatus.inProgress:
         return AppColors.warning;
       case BookingStatus.confirmed:
       case BookingStatus.enRoute:
       case null:
-        return AppColors.green;
+        return AppColors.kigaliGreen;
     }
   }
 
@@ -174,7 +174,7 @@ class _InAppTrackingScreenState extends State<InAppTrackingScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Tracking ${widget.providerName}'),
-        backgroundColor: AppColors.tab,
+        backgroundColor: AppColors.primaryBlue,
         foregroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -204,7 +204,7 @@ class _InAppTrackingScreenState extends State<InAppTrackingScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.map_outlined, size: 56, color: AppColors.tab),
+                    const Icon(Icons.map_outlined, size: 56, color: AppColors.primaryBlue),
                     const SizedBox(height: 12),
                     Text(
                       widget.jobLocation ?? 'Kigali, Rwanda',
@@ -251,8 +251,8 @@ class _InAppTrackingScreenState extends State<InAppTrackingScreen> {
                   Row(
                     children: [
                       CircleAvatar(
-                        backgroundColor: AppColors.tab.withValues(alpha: 0.1),
-                        child: const Icon(Icons.person, color: AppColors.tab),
+                        backgroundColor: AppColors.primarySoft,
+                        child: const Icon(Icons.person, color: AppColors.primaryBlue),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -284,7 +284,7 @@ class _InAppTrackingScreenState extends State<InAppTrackingScreen> {
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.tab,
+                        backgroundColor: AppColors.primaryBlue,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),

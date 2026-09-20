@@ -5,6 +5,7 @@ import '../models/professional.dart';
 import '../theme/app_theme.dart';
 import '../utils/format.dart';
 import '../utils/location.dart';
+import '../widgets/app_surfaces.dart';
 
 class BookingScreen extends StatefulWidget {
   const BookingScreen({super.key, required this.professional});
@@ -88,6 +89,7 @@ class _BookingScreenState extends State<BookingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(
         title: Text(_summary ? 'Booking summary' : 'Book service'),
       ),
@@ -104,80 +106,96 @@ class _BookingScreenState extends State<BookingScreen> {
             style: const TextStyle(color: AppColors.muted),
           ),
           const SizedBox(height: 20),
-          if (!_summary) ...[
-            const Text('Service', style: TextStyle(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              initialValue: _service,
-              items: [
-                for (final service in widget.professional.services)
-                  DropdownMenuItem(value: service, child: Text(service)),
-              ],
-              onChanged: (value) {
-                if (value != null) setState(() => _service = value);
-              },
-            ),
-            const SizedBox(height: 16),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Date'),
-              subtitle: Text(formatShortDate(_date)),
-              trailing: const Icon(Icons.event),
-              onTap: _pickDate,
-            ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Time'),
-              subtitle: Text(_time.format(context)),
-              trailing: const Icon(Icons.schedule),
-              onTap: _pickTime,
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _location,
-              decoration: InputDecoration(
-                labelText: 'Location',
-                suffixIcon: IconButton(
-                  tooltip: 'Use current location',
-                  icon: const Icon(Icons.my_location),
-                  onPressed: _useCurrentLocation,
-                ),
+          if (!_summary)
+            SurfaceCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Service',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    initialValue: _service,
+                    items: [
+                      for (final service in widget.professional.services)
+                        DropdownMenuItem(value: service, child: Text(service)),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) setState(() => _service = value);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Date'),
+                    subtitle: Text(formatShortDate(_date)),
+                    trailing: const Icon(Icons.event, color: AppColors.primaryBlue),
+                    onTap: _pickDate,
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Time'),
+                    subtitle: Text(_time.format(context)),
+                    trailing: const Icon(Icons.schedule, color: AppColors.primaryBlue),
+                    onTap: _pickTime,
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _location,
+                    decoration: InputDecoration(
+                      labelText: 'Location',
+                      suffixIcon: IconButton(
+                        tooltip: 'Use current location',
+                        icon: const Icon(Icons.my_location),
+                        onPressed: _useCurrentLocation,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: _description,
+                    maxLines: 3,
+                    decoration: const InputDecoration(labelText: 'Job details'),
+                  ),
+                  const SizedBox(height: 24),
+                  FilledButton(
+                    onPressed: () => setState(() => _summary = true),
+                    child: const Text('Review booking'),
+                  ),
+                ],
+              ),
+            )
+          else
+            SurfaceCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _Line(label: 'Service', value: _service),
+                  _Line(label: 'When', value: formatDateTime(_scheduledAt)),
+                  _Line(label: 'Where', value: _location.text),
+                  _Line(label: 'Details', value: _description.text),
+                  _Line(
+                    label: 'Fee',
+                    value: formatRwf(widget.professional.serviceFeeRwf),
+                  ),
+                  const SizedBox(height: 24),
+                  FilledButton(
+                    onPressed: () => Navigator.of(context).pushNamed(
+                      '/payment',
+                      arguments: _draft,
+                    ),
+                    child: const Text('Continue to payment'),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: () => setState(() => _summary = false),
+                    child: const Text('Edit details'),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: _description,
-              maxLines: 3,
-              decoration: const InputDecoration(labelText: 'Job details'),
-            ),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: () => setState(() => _summary = true),
-              child: const Text('Review booking'),
-            ),
-          ] else ...[
-            _Line(label: 'Service', value: _service),
-            _Line(label: 'When', value: formatDateTime(_scheduledAt)),
-            _Line(label: 'Where', value: _location.text),
-            _Line(label: 'Details', value: _description.text),
-            _Line(
-              label: 'Fee',
-              value: formatRwf(widget.professional.serviceFeeRwf),
-            ),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pushNamed(
-                '/payment',
-                arguments: _draft,
-              ),
-              child: const Text('Continue to payment'),
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton(
-              onPressed: () => setState(() => _summary = false),
-              child: const Text('Edit details'),
-            ),
-          ],
         ],
       ),
     );

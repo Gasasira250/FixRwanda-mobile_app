@@ -19,36 +19,6 @@ class BookingDetailScreen extends StatefulWidget {
 class _BookingDetailScreenState extends State<BookingDetailScreen> {
   var _cancelling = false;
 
-  Color _chipColor(BookingStatus status) {
-    switch (status) {
-      case BookingStatus.cancelled:
-        return Colors.red.shade100;
-      case BookingStatus.completed:
-        return Colors.green.shade100;
-      case BookingStatus.inProgress:
-      case BookingStatus.enRoute:
-      case BookingStatus.arrived:
-        return Colors.orange.shade100;
-      case BookingStatus.confirmed:
-        return Colors.blue.shade100;
-    }
-  }
-
-  Color _chipTextColor(BookingStatus status) {
-    switch (status) {
-      case BookingStatus.cancelled:
-        return Colors.red.shade800;
-      case BookingStatus.completed:
-        return Colors.green.shade800;
-      case BookingStatus.inProgress:
-      case BookingStatus.enRoute:
-      case BookingStatus.arrived:
-        return Colors.orange.shade800;
-      case BookingStatus.confirmed:
-        return Colors.blue.shade800;
-    }
-  }
-
   Future<void> _cancelBooking(
     AppController app,
     CancellationQuote quote,
@@ -119,11 +89,9 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         final cancelled = booking.status == BookingStatus.cancelled;
 
         return Scaffold(
-          backgroundColor: AppColors.cream,
+          backgroundColor: AppColors.backgroundLight,
           appBar: AppBar(
             title: const Text('Booking Details'),
-            backgroundColor: AppColors.tab,
-            foregroundColor: Colors.white,
           ),
           body: FutureBuilder<CancellationQuote>(
             future: app.quoteCancellation(booking),
@@ -134,11 +102,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _OverviewCard(
-                      booking: booking,
-                      chipColor: _chipColor(booking.status),
-                      chipTextColor: _chipTextColor(booking.status),
-                    ),
+                    _OverviewCard(booking: booking),
                     const SizedBox(height: 16),
                     JobMapCard(query: booking.location),
                     if (booking.isUpcoming) ...[
@@ -148,7 +112,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                         height: 48,
                         child: FilledButton.icon(
                           style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.tab,
+                            backgroundColor: AppColors.primaryBlue,
                             foregroundColor: Colors.white,
                           ),
                           onPressed: () {
@@ -246,7 +210,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                               height: 48,
                               child: OutlinedButton(
                                 style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(color: AppColors.tab),
+                                  side: const BorderSide(color: AppColors.primaryBlue),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10),
                                   ),
@@ -265,7 +229,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                                     : const Text(
                                         'Cancel booking',
                                         style: TextStyle(
-                                          color: AppColors.tab,
+                                          color: AppColors.primaryBlue,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
@@ -295,18 +259,13 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
 }
 
 class _OverviewCard extends StatelessWidget {
-  const _OverviewCard({
-    required this.booking,
-    required this.chipColor,
-    required this.chipTextColor,
-  });
+  const _OverviewCard({required this.booking});
 
   final Booking booking;
-  final Color chipColor;
-  final Color chipTextColor;
 
   @override
   Widget build(BuildContext context) {
+    final tone = StatusTone.forBooking(booking.status);
     return _InfoCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -319,7 +278,8 @@ class _OverviewCard extends StatelessWidget {
                   booking.professionalName,
                   style: const TextStyle(
                     fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.darkSlate,
                   ),
                 ),
               ),
@@ -329,13 +289,13 @@ class _OverviewCard extends StatelessWidget {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: chipColor,
+                  color: tone.background,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   booking.statusLabel,
                   style: TextStyle(
-                    color: chipTextColor,
+                    color: tone.foreground,
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
                   ),
@@ -382,13 +342,7 @@ class _InfoCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: AppShadows.card,
       ),
       child: child,
     );
@@ -419,7 +373,7 @@ class _RowLine extends StatelessWidget {
             textAlign: TextAlign.right,
             style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: emphasize ? AppColors.tab : AppColors.ink,
+              color: emphasize ? AppColors.primaryBlue : AppColors.ink,
               fontSize: emphasize ? 16 : 14,
             ),
           ),

@@ -16,30 +16,31 @@ class ProfileScreen extends StatelessWidget {
       listenable: app,
       builder: (context, _) {
         final customer = app.customer;
-        return SafeArea(
+        return ColoredBox(
+          color: AppColors.backgroundLight,
+          child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [AppColors.skyDark, AppColors.primaryBlue],
+                    ),
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: AppShadows.card,
                   ),
                   child: Row(
                     children: [
                       const CircleAvatar(
-                        radius: 24,
-                        backgroundColor: Color(0xFFE3F2FD),
-                        child: Icon(Icons.person, color: AppColors.tab),
+                        radius: 28,
+                        backgroundColor: AppColors.sunYellow,
+                        child: Icon(Icons.person, color: AppColors.skyDark),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -51,17 +52,18 @@ class ProfileScreen extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
                               ),
                             ),
-                            const SizedBox(height: 2),
+                            const SizedBox(height: 4),
                             Text(
                               customer?.identifier ?? '',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                color: Colors.grey,
+                                color: Color(0xFFD6E6F7),
                                 fontSize: 13,
                               ),
                             ),
@@ -72,11 +74,16 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Material(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  clipBehavior: Clip.antiAlias,
-                  child: Column(
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: AppShadows.card,
+                  ),
+                  child: Material(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    clipBehavior: Clip.antiAlias,
+                    child: Column(
                     children: [
                       _AccountMenuTile(
                         icon: Icons.edit_outlined,
@@ -107,6 +114,7 @@ class ProfileScreen extends StatelessWidget {
                             .pushNamed('/account/support'),
                       ),
                     ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -141,6 +149,7 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ],
             ),
+          ),
           ),
         );
       },
@@ -191,6 +200,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(title: const Text('Edit profile')),
       body: Form(
         key: _formKey,
@@ -255,6 +265,7 @@ class PaymentMethodsScreen extends StatelessWidget {
       listenable: app,
       builder: (context, _) {
         return Scaffold(
+          backgroundColor: AppColors.backgroundLight,
           appBar: AppBar(title: const Text('Payment methods')),
           body: ListView(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
@@ -340,6 +351,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
         final history = [...app.bookings]
           ..sort((a, b) => b.scheduledAt.compareTo(a.scheduledAt));
         return Scaffold(
+          backgroundColor: AppColors.backgroundLight,
           appBar: AppBar(title: const Text('History & locations')),
           body: ListView(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
@@ -436,6 +448,7 @@ class SupportLegalScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(title: const Text('Support & legal')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
@@ -566,7 +579,15 @@ class _AccountMenuTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Icon(icon, color: AppColors.skyDark),
+      leading: Container(
+        width: 36,
+        height: 36,
+        decoration: const BoxDecoration(
+          color: AppColors.primarySoft,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: AppColors.primaryBlue, size: 18),
+      ),
       title: Text(title),
       subtitle: subtitle == null
           ? null

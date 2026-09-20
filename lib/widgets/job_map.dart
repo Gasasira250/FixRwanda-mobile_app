@@ -67,7 +67,7 @@ class JobMapCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const Icon(Icons.map_outlined, color: AppColors.tab),
+                const Icon(Icons.map_outlined, color: AppColors.primaryBlue),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(

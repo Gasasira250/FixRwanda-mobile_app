@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FixRwanda Admin</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div id="login" class="wrap">
+    <h1>FixRwanda Admin</h1>
+    <p>Verify professionals and review bookings and payments.</p>
+    <label>Email</label>
+    <input id="email" placeholder="admin@fixrwanda.rw" />
+    <label>Password</label>
+    <input id="password" type="password" placeholder="Password" />
+    <button id="signin">Sign in</button>
+    <p id="login-error" class="error"></p>
+  </div>
+
+  <div id="app" class="hidden">
+    <header>
+      <div>
+        <strong>FixRwanda</strong>
+        <span>Admin dashboard</span>
+      </div>
+      <button id="signout">Sign out</button>
+    </header>
+    <section id="stats" class="stats"></section>
+    <section>
+      <h2>Professionals</h2>
+      <div id="pros"></div>
+    </section>
+    <section>
+      <h2>Bookings</h2>
+      <div id="bookings"></div>
+    </section>
+  </div>
+  <script src="./app.js"></script>
+</body>
+</html>

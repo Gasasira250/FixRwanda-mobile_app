@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: fixrwanda-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 4000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fixrwanda-db
+          property: connectionString
+    databases:
+      - name: fixrwanda-db
+        plan: free

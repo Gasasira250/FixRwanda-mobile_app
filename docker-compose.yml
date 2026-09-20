@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: fixrwanda
+      POSTGRES_PASSWORD: fixrwanda
+      POSTGRES_DB: fixrwanda
+    ports:
+      - "5433:5432"
+    volumes:
+      - fixrwanda_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fixrwanda"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      PORT: 4000
+      JWT_SECRET: fixrwanda-interview-secret
+      DATABASE_URL: postgres://fixrwanda:fixrwanda@db:5432/fixrwanda
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  fixrwanda_pg:

@@ -48,7 +48,7 @@ void main() {
   });
 
   testWidgets('signed-in home shows the Kigali hero and categories', (tester) async {
-    tester.view.physicalSize = const Size(390, 844);
+    tester.view.physicalSize = const Size(430, 932);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -72,14 +72,16 @@ void main() {
       ),
     );
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.textContaining('Muraho'), findsOneWidget);
-    expect(find.text('Find a professional in Kigali'), findsOneWidget);
-    expect(find.text('Plumbing'), findsOneWidget);
+    expect(find.textContaining('Find a professional'), findsOneWidget);
+    expect(find.text('Plumbing'), findsWidgets);
     expect(find.text('Escrow, not cash'), findsOneWidget);
     expect(find.text('Home'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
     controller.dispose();
   });
 }

@@ -363,21 +363,24 @@ class _HomeHero extends StatelessWidget {
                         color: Colors.white.withValues(alpha: 0.18),
                       ),
                     ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
+                    child: Row(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.location_on_rounded,
                           size: 16,
                           color: AppTheme.secondaryColor,
                         ),
-                        SizedBox(width: 4),
-                        Text(
-                          'Gasabo · Kicukiro · Nyarugenge',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            'Gasabo · Kicukiro · Nyarugenge',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ],
@@ -418,7 +421,6 @@ class ProfessionalCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final tint = CategoryLook.tint(professional.category);
     return SurfaceCard(
-      accent: tint,
       onTap: () {
         Navigator.of(context).pushNamed(
           '/professional',
@@ -431,20 +433,29 @@ class ProfessionalCard extends StatelessWidget {
           Row(
             children: [
               Container(
+                width: 4,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: tint,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
                 padding: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(color: tint.withValues(alpha: 0.35), width: 2),
                 ),
                 child: CircleAvatar(
-                  radius: 24,
+                  radius: 22,
                   backgroundColor: tint.withValues(alpha: 0.14),
                   child: Text(
                     professional.name[0],
                     style: TextStyle(
                       color: tint,
                       fontWeight: FontWeight.w800,
-                      fontSize: 18,
+                      fontSize: 16,
                     ),
                   ),
                 ),
@@ -470,11 +481,6 @@ class ProfessionalCard extends StatelessWidget {
                   ],
                 ),
               ),
-              IconWell(
-                icon: CategoryLook.icon(professional.category),
-                color: tint,
-                size: 36,
-              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -485,12 +491,14 @@ class ProfessionalCard extends StatelessWidget {
                 ' ${professional.rating}',
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
-              const SizedBox(width: 8),
-              Text(
-                '${professional.completedJobs} jobs',
-                style: Theme.of(context).textTheme.bodyMedium,
+              Expanded(
+                child: Text(
+                  ' · ${professional.completedJobs} jobs',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
               ),
-              const Spacer(),
               Text(
                 Money.rwf(professional.startingPrice),
                 style: const TextStyle(

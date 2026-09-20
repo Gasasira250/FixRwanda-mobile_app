@@ -388,10 +388,10 @@ class JourneyStrip extends StatelessWidget {
       (Icons.search_rounded, 'Find'),
       (Icons.lock_rounded, 'Escrow'),
       (Icons.near_me_rounded, 'Track'),
-      (Icons.verified_rounded, 'OTP pay'),
+      (Icons.verified_rounded, 'OTP'),
     ];
     return SurfaceCard(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       child: Row(
         children: [
           for (var i = 0; i < steps.length; i++) ...[
@@ -399,34 +399,39 @@ class JourneyStrip extends StatelessWidget {
               Expanded(
                 child: Container(
                   height: 2,
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
                   color: AppTheme.primaryColor.withValues(alpha: 0.15),
                 ),
               ),
-            Column(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
+            Expanded(
+              child: Column(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      steps[i].$1,
+                      size: 18,
+                      color: AppTheme.primaryColor,
+                    ),
                   ),
-                  child: Icon(
-                    steps[i].$1,
-                    size: 20,
-                    color: AppTheme.primaryColor,
+                  const SizedBox(height: 6),
+                  Text(
+                    steps[i].$2,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  steps[i].$2,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ],
@@ -450,11 +455,19 @@ class ActiveJobBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SurfaceCard(
-      accent: AppTheme.secondaryColor,
       onTap: onOpen,
       padding: const EdgeInsets.fromLTRB(12, 14, 14, 14),
       child: Row(
         children: [
+          Container(
+            width: 4,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppTheme.secondaryColor,
+              borderRadius: BorderRadius.circular(99),
+            ),
+          ),
+          const SizedBox(width: 10),
           Container(
             width: 44,
             height: 44,

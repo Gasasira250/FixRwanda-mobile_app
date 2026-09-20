@@ -1,6 +1,10 @@
 # FixRwanda
 
-Book **verified** home and business professionals across Rwanda. Customers search a trade, view ID/TVET verification, book a job, pay with mock **MTN MoMo**, **Airtel Money** or **card**, then track status and cancel with server-side refund rules.
+Book **verified** home and business professionals across Rwanda. Customers search a trade, view ID/TVET verification, book a job, pay with **MTN MoMo**, **Airtel Money** or **card**, then track status and cancel with server-side refund rules.
+
+**Live web app:** https://gasasira250.github.io/FixRwanda/
+
+The GitHub Pages site runs the Flutter web client. If the API is not hosted, the app still loads professionals and bookings from the built-in catalog.
 
 ```text
 Flutter app  →  Express REST API  →  PostgreSQL
@@ -132,7 +136,8 @@ flutter build appbundle --release
 
 ## Hosting
 
-`render.yaml` deploys the API as Docker with a managed Postgres database. After deploy, point the Flutter client at the public API URL (or continue using offline demo mode).
+- **GitHub Pages (web app):** https://gasasira250.github.io/FixRwanda/
+- **API (Render):** open [Deploy to Render](https://render.com/deploy?repo=https://github.com/Gasasira250/FixRwanda), sign in, and create the `fixrwanda-api` service from `render.yaml`. After it is live, rebuild the web app with `--dart-define=API_BASE=https://YOUR-SERVICE.onrender.com/api`.
 
 ## GitHub
 

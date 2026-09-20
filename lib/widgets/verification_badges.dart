@@ -98,7 +98,7 @@ class KigaliGreenBadge extends StatelessWidget {
           Icon(Icons.verified_rounded, size: 16, color: AppTheme.accentGreen),
           SizedBox(width: 6),
           Text(
-            'Kigali Green Badge',
+            'Green Badge',
             style: TextStyle(
               color: AppTheme.accentGreen,
               fontWeight: FontWeight.w700,

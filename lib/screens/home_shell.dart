@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../domain/broadcast_router.dart';
+import '../models/booking.dart';
 import '../models/professional.dart';
 import '../repositories/professional_repository.dart';
 import '../state/marketplace_controller.dart';
@@ -76,14 +78,28 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  void _openSearch([String? query]) {
+  void _openSearch([String? query, String? location]) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ProfessionalsScreen(
-          initial: ProfessionalFilter(query: query ?? search.text),
+          initial: ProfessionalFilter(
+            query: query ?? search.text,
+            location: location,
+          ),
         ),
       ),
     );
+  }
+
+  Booking? _activeBooking(MarketplaceController controller) {
+    final open = controller.bookings.where(
+      (item) =>
+          item.status != BookingStatus.completed &&
+          item.status != BookingStatus.cancelled &&
+          item.status != BookingStatus.expired,
+    );
+    if (open.isEmpty) return null;
+    return open.first;
   }
 
   @override
@@ -95,121 +111,143 @@ class _HomeScreenState extends State<HomeScreen> {
         .where((professional) => professional.isBookable)
         .take(6)
         .toList();
+    final active = _activeBooking(controller);
 
-    return ListView(
-      padding: EdgeInsets.zero,
-      children: [
-        _HomeHero(
-          greeting: 'Muraho, $firstName',
-          search: search,
-          onSearch: () => _openSearch(),
-          onFilter: () => _openSearch(),
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          height: 40,
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            scrollDirection: Axis.horizontal,
-            children: const [
-              TrustChip(icon: Icons.lock_rounded, label: 'Escrow, not cash'),
-              SizedBox(width: 8),
-              TrustChip(icon: Icons.verified_rounded, label: 'Green Badge'),
-              SizedBox(width: 8),
-              TrustChip(icon: Icons.near_me_rounded, label: 'Live tracking'),
-              SizedBox(width: 8),
-              TrustChip(icon: Icons.timer_rounded, label: '15-min offer'),
-            ],
+    return AtmosphereBackdrop(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          _HomeHero(
+            greeting: 'Muraho, $firstName',
+            search: search,
+            onSearch: () => _openSearch(),
+            onFilter: () => _openSearch(),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (controller.isProfessional &&
-                  controller.myProfessional?.isBookable != true)
-                const ErrorBanner(
-                  message:
-                      'Complete NIDA KYC, Irembo good conduct, and a TVET/IPRC or RDB document to receive job offers.',
-                ),
-              SectionHeader(
-                title: 'Categories',
-                actionLabel: 'See all',
-                onAction: () => _openSearch(),
-              ),
-              const SizedBox(height: 12),
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: AppConstants.serviceCategories.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 1.22,
-                ),
-                itemBuilder: (context, index) {
-                  final category = AppConstants.serviceCategories[index];
-                  final tint = CategoryLook.tint(category);
-                  return SurfaceCard(
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => JobRequestScreen(category: category),
-                        ),
-                      );
-                    },
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        IconWell(
-                          icon: CategoryLook.icon(category),
-                          color: tint,
-                        ),
-                        const Spacer(),
-                        Text(
-                          category,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            height: 1.2,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Book in Kigali',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ],
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 40,
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              scrollDirection: Axis.horizontal,
+              children: const [
+                TrustChip(icon: Icons.lock_rounded, label: 'Escrow, not cash'),
+                SizedBox(width: 8),
+                TrustChip(icon: Icons.verified_rounded, label: 'Green Badge'),
+                SizedBox(width: 8),
+                TrustChip(icon: Icons.near_me_rounded, label: 'Live tracking'),
+                SizedBox(width: 8),
+                TrustChip(icon: Icons.timer_rounded, label: '15-min offer'),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (controller.isProfessional &&
+                    controller.myProfessional?.isBookable != true)
+                  const ErrorBanner(
+                    message:
+                        'Complete NIDA KYC, Irembo good conduct, and a TVET/IPRC or RDB document to receive job offers.',
+                  ),
+                if (active != null) ...[
+                  ActiveJobBanner(
+                    title: active.serviceName,
+                    subtitle:
+                        '${active.professionalName} · ${active.status.name}',
+                    onOpen: () => Navigator.of(context).pushNamed(
+                      '/booking',
+                      arguments: active.id,
                     ),
-                  );
-                },
-              ),
-              const SizedBox(height: 24),
-              SectionHeader(
-                title: 'Verified professionals',
-                actionLabel: 'Browse',
-                onAction: () => _openSearch(),
-              ),
-              const SizedBox(height: 12),
-              if (bookable.isEmpty)
-                const EmptyState(
-                  title: 'No professionals yet',
-                  message: 'Check back soon or try another category.',
-                )
-              else
-                ...bookable.map(
-                  (professional) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: ProfessionalCard(professional: professional),
+                  ),
+                  const SizedBox(height: 18),
+                ],
+                SectionHeader(
+                  title: 'Kigali districts',
+                  subtitle: 'Gasabo · Kicukiro · Nyarugenge',
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 42,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      for (final district in kigaliDistricts) ...[
+                        DistrictPill(
+                          label: district,
+                          onTap: () => _openSearch(null, district),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                    ],
                   ),
                 ),
-            ],
+                const SizedBox(height: 22),
+                const SectionHeader(
+                  title: 'How it works',
+                  subtitle: 'Book, hold payment, track, confirm with OTP',
+                ),
+                const SizedBox(height: 10),
+                const JourneyStrip(),
+                const SizedBox(height: 22),
+                SectionHeader(
+                  title: 'Categories',
+                  subtitle: 'Pick a trade and request a technician',
+                  actionLabel: 'See all',
+                  onAction: () => _openSearch(),
+                ),
+                const SizedBox(height: 12),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: AppConstants.serviceCategories.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: 1.05,
+                  ),
+                  itemBuilder: (context, index) {
+                    final category = AppConstants.serviceCategories[index];
+                    return SoftCategoryTile(
+                      category: category,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                JobRequestScreen(category: category),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+                const SizedBox(height: 24),
+                SectionHeader(
+                  title: 'Verified professionals',
+                  subtitle: 'Green Badge technicians ready in Kigali',
+                  actionLabel: 'Browse',
+                  onAction: () => _openSearch(),
+                ),
+                const SizedBox(height: 12),
+                if (bookable.isEmpty)
+                  const EmptyState(
+                    title: 'No professionals yet',
+                    message: 'Check back soon or try another category.',
+                  )
+                else
+                  ...bookable.map(
+                    (professional) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: ProfessionalCard(professional: professional),
+                    ),
+                  ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -234,41 +272,64 @@ class _HomeHero extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppTheme.primaryColor, AppTheme.heroNavy],
+          colors: [
+            AppTheme.primaryColor,
+            AppTheme.heroNavy,
+            Color(0xFF012A5C),
+          ],
         ),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(36)),
       ),
       child: Stack(
         children: [
           Positioned(
-            right: -24,
-            top: -10,
+            right: -30,
+            top: -20,
             child: Container(
-              width: 140,
-              height: 140,
+              width: 160,
+              height: 160,
               decoration: BoxDecoration(
-                color: AppTheme.secondaryColor.withValues(alpha: 0.18),
+                color: AppTheme.secondaryColor.withValues(alpha: 0.16),
                 shape: BoxShape.circle,
               ),
             ),
           ),
           Positioned(
-            right: 28,
-            top: 36,
+            left: -20,
+            bottom: 40,
             child: Container(
-              width: 54,
-              height: 54,
+              width: 90,
+              height: 90,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.06),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            right: 22,
+            top: 42,
+            child: Container(
+              width: 58,
+              height: 58,
               decoration: BoxDecoration(
                 color: AppTheme.secondaryColor,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.18),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               ),
-              child: const Icon(Icons.handyman_rounded, size: 28),
+              child: const Icon(Icons.handyman_rounded, size: 30),
             ),
           ),
           SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 26),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -281,15 +342,15 @@ class _HomeHero extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   const Text(
-                    'Find a professional in Kigali',
+                    'Find a professional\nin Kigali',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 26,
+                      fontSize: 28,
                       fontWeight: FontWeight.w800,
-                      height: 1.15,
+                      height: 1.12,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -298,12 +359,18 @@ class _HomeHero extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.14),
                       borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.18),
+                      ),
                     ),
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.location_on_rounded,
-                            size: 16, color: AppTheme.secondaryColor),
+                        Icon(
+                          Icons.location_on_rounded,
+                          size: 16,
+                          color: AppTheme.secondaryColor,
+                        ),
                         SizedBox(width: 4),
                         Text(
                           'Gasabo · Kicukiro · Nyarugenge',
@@ -351,83 +418,95 @@ class ProfessionalCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final tint = CategoryLook.tint(professional.category);
     return SurfaceCard(
+      accent: tint,
       onTap: () {
         Navigator.of(context).pushNamed(
           '/professional',
           arguments: professional.id,
         );
       },
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: tint.withValues(alpha: 0.14),
-            child: Text(
-              professional.name[0],
-              style: TextStyle(
-                color: tint,
-                fontWeight: FontWeight.w800,
-                fontSize: 20,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  professional.name,
-                  style: const TextStyle(fontWeight: FontWeight.w800),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: tint.withValues(alpha: 0.35), width: 2),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  '${professional.category} · ${professional.sector ?? professional.location}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.star_rounded,
-                            color: Color(0xFFF59E0B), size: 16),
-                        Text(
-                          ' ${professional.rating}',
-                          style: const TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                      ],
+                child: CircleAvatar(
+                  radius: 24,
+                  backgroundColor: tint.withValues(alpha: 0.14),
+                  child: Text(
+                    professional.name[0],
+                    style: TextStyle(
+                      color: tint,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 18,
                     ),
-                    if (professional.kigaliGreenBadge)
-                      const KigaliGreenBadge()
-                    else
-                      StatusPill.verification(professional.verificationStatus),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      professional.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${professional.category} · ${professional.district}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
                   ],
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              Money.rwf(professional.startingPrice),
-              style: const TextStyle(
-                fontWeight: FontWeight.w800,
-                color: AppTheme.primaryColor,
               ),
-            ),
+              IconWell(
+                icon: CategoryLook.icon(professional.category),
+                color: tint,
+                size: 36,
+              ),
+            ],
           ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 16),
+              Text(
+                ' ${professional.rating}',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${professional.completedJobs} jobs',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const Spacer(),
+              Text(
+                Money.rwf(professional.startingPrice),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.primaryColor,
+                ),
+              ),
+            ],
+          ),
+          if (professional.kigaliGreenBadge) ...[
+            const SizedBox(height: 8),
+            const KigaliGreenBadge(),
+          ] else ...[
+            const SizedBox(height: 8),
+            StatusPill.verification(professional.verificationStatus),
+          ],
         ],
       ),
     );

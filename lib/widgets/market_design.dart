@@ -36,6 +36,68 @@ class CategoryLook {
   }
 }
 
+class AtmosphereBackdrop extends StatelessWidget {
+  const AtmosphereBackdrop({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFFEEF4FB),
+            AppTheme.backgroundColor,
+            Color(0xFFF3F7FC),
+          ],
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            top: 180,
+            left: -60,
+            child: _Blob(
+              size: 180,
+              color: AppTheme.primaryColor.withValues(alpha: 0.05),
+            ),
+          ),
+          Positioned(
+            bottom: 120,
+            right: -40,
+            child: _Blob(
+              size: 140,
+              color: AppTheme.secondaryColor.withValues(alpha: 0.12),
+            ),
+          ),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _Blob extends StatelessWidget {
+  const _Blob({required this.size, required this.color});
+
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      ),
+    );
+  }
+}
+
 class SurfaceCard extends StatelessWidget {
   const SurfaceCard({
     super.key,
@@ -85,18 +147,38 @@ class SurfaceCard extends StatelessWidget {
 }
 
 class SectionHeader extends StatelessWidget {
-  const SectionHeader({super.key, required this.title, this.actionLabel, this.onAction});
+  const SectionHeader({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.actionLabel,
+    this.onAction,
+  });
 
   final String title;
+  final String? subtitle;
   final String? actionLabel;
   final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Expanded(
-          child: Text(title, style: Theme.of(context).textTheme.titleLarge),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: Theme.of(context).textTheme.titleLarge),
+              if (subtitle != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  subtitle!,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
+            ],
+          ),
         ),
         if (actionLabel != null)
           TextButton(onPressed: onAction, child: Text(actionLabel!)),
@@ -119,6 +201,7 @@ class TrustChip extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(999),
         boxShadow: AppTheme.cardShadow,
+        border: Border.all(color: const Color(0xFFE8EEF5)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -134,6 +217,62 @@ class TrustChip extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class DistrictPill extends StatelessWidget {
+  const DistrictPill({
+    super.key,
+    required this.label,
+    required this.onTap,
+    this.selected = false,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: selected ? AppTheme.primaryColor : Colors.white,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: selected
+                  ? AppTheme.primaryColor
+                  : const Color(0xFFD9E3F0),
+            ),
+            boxShadow: selected ? null : AppTheme.cardShadow,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.location_on_rounded,
+                size: 16,
+                color: selected ? AppTheme.secondaryColor : AppTheme.primaryColor,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  color: selected ? Colors.white : AppTheme.textColor,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -157,10 +296,205 @@ class IconWell extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            color.withValues(alpha: 0.18),
+            color.withValues(alpha: 0.08),
+          ],
+        ),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Icon(icon, color: color),
+    );
+  }
+}
+
+class SoftCategoryTile extends StatelessWidget {
+  const SoftCategoryTile({
+    super.key,
+    required this.category,
+    required this.onTap,
+  });
+
+  final String category;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final tint = CategoryLook.tint(category);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: onTap,
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white,
+                tint.withValues(alpha: 0.08),
+              ],
+            ),
+            border: Border.all(color: tint.withValues(alpha: 0.18)),
+            boxShadow: AppTheme.cardShadow,
+          ),
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              IconWell(
+                icon: CategoryLook.icon(category),
+                color: tint,
+                size: 44,
+              ),
+              const Spacer(),
+              Text(
+                category,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  height: 1.2,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Book now',
+                style: TextStyle(
+                  color: tint,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class JourneyStrip extends StatelessWidget {
+  const JourneyStrip({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    const steps = [
+      (Icons.search_rounded, 'Find'),
+      (Icons.lock_rounded, 'Escrow'),
+      (Icons.near_me_rounded, 'Track'),
+      (Icons.verified_rounded, 'OTP pay'),
+    ];
+    return SurfaceCard(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      child: Row(
+        children: [
+          for (var i = 0; i < steps.length; i++) ...[
+            if (i > 0)
+              Expanded(
+                child: Container(
+                  height: 2,
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                ),
+              ),
+            Column(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    steps[i].$1,
+                    size: 20,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  steps[i].$2,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class ActiveJobBanner extends StatelessWidget {
+  const ActiveJobBanner({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.onOpen,
+  });
+
+  final String title;
+  final String subtitle;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return SurfaceCard(
+      accent: AppTheme.secondaryColor,
+      onTap: onOpen,
+      padding: const EdgeInsets.fromLTRB(12, 14, 14, 14),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppTheme.secondaryColor.withValues(alpha: 0.35),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(Icons.handyman_rounded),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Active job',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.mutedTextColor,
+                  ),
+                ),
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+        ],
+      ),
     );
   }
 }

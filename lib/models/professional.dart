@@ -1,133 +1,94 @@
-enum VerificationStatus { pending, verified, rejected, expired }
-
-class ServiceCategory {
-  const ServiceCategory({
-    required this.id,
-    required this.name,
-    required this.icon,
-  });
-
-  final String id;
-  final String name;
-  final String icon;
-
-  factory ServiceCategory.fromJson(Map<String, dynamic> json) {
-    return ServiceCategory(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      icon: json['icon'] as String? ?? '🛠️',
-    );
-  }
+enum VerificationStatus {
+  pending,
+  verified,
+  rejected,
+  expired,
 }
 
 class Professional {
+  final String id;
+  final String name;
+  final String imageUrl;
+  final String category;
+  final String description;
+  final String location;
+  final int startingPrice;
+  final double rating;
+  final int completedJobs;
+  final bool phoneVerified;
+  final bool idVerified;
+  final bool certificateVerified;
+  final VerificationStatus verificationStatus;
+  final VerificationStatus phoneVerificationStatus;
+  final VerificationStatus idVerificationStatus;
+  final VerificationStatus tvetVerificationStatus;
+  final String? userId;
+  final String? sector;
+
   const Professional({
     required this.id,
     required this.name,
-    required this.trade,
+    required this.imageUrl,
+    required this.category,
+    required this.description,
     required this.location,
+    required this.startingPrice,
     required this.rating,
-    required this.jobsCompleted,
-    required this.tvetVerified,
+    required this.completedJobs,
+    required this.phoneVerified,
     required this.idVerified,
+    required this.certificateVerified,
     required this.verificationStatus,
-    required this.services,
-    required this.serviceFeeRwf,
-    this.about =
-        'Trusted local professional available for home and business work across Rwanda.',
+    this.phoneVerificationStatus = VerificationStatus.pending,
+    this.idVerificationStatus = VerificationStatus.pending,
+    this.tvetVerificationStatus = VerificationStatus.pending,
+    this.userId,
+    this.sector,
   });
 
-  final String id;
-  final String name;
-  final String trade;
-  final String location;
-  final double rating;
-  final int jobsCompleted;
-  final bool tvetVerified;
-  final bool idVerified;
-  final VerificationStatus verificationStatus;
-  final List<String> services;
-  final int serviceFeeRwf;
-  final String about;
+  bool get isBookable => verificationStatus == VerificationStatus.verified;
 
-  bool get isVerifiedProfessional =>
-      verificationStatus == VerificationStatus.verified &&
-      (tvetVerified || idVerified);
-
-  String get verificationLabel {
-    switch (verificationStatus) {
-      case VerificationStatus.verified:
-        return 'Verified professional';
-      case VerificationStatus.pending:
-        return 'Verification pending';
-      case VerificationStatus.rejected:
-        return 'Verification rejected';
-      case VerificationStatus.expired:
-        return 'Verification expired';
-    }
-  }
-
-  factory Professional.fromJson(Map<String, dynamic> json) {
-    return Professional(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      trade: json['trade'] as String,
-      location: json['location'] as String,
-      rating: (json['rating'] as num?)?.toDouble() ?? 0,
-      jobsCompleted: json['jobsCompleted'] as int? ?? 0,
-      tvetVerified: json['tvetVerified'] as bool? ?? false,
-      idVerified: json['idVerified'] as bool? ?? false,
-      verificationStatus: VerificationStatus.values.firstWhere(
-        (value) => value.name == json['verificationStatus'],
-        orElse: () => VerificationStatus.pending,
-      ),
-      services: (json['services'] as List<dynamic>? ?? const [])
-          .map((item) => item.toString())
-          .toList(),
-      serviceFeeRwf: json['serviceFeeRwf'] as int? ?? 0,
-      about: json['about'] as String? ??
-          'Trusted local professional available for home and business work across Rwanda.',
-    );
-  }
-}
-
-class Customer {
-  const Customer({
-    required this.id,
-    required this.name,
-    required this.identifier,
-    this.role = 'customer',
-    this.token,
-  });
-
-  final String id;
-  final String name;
-  final String identifier;
-  final String role;
-  final String? token;
-
-  factory Customer.fromJson(Map<String, dynamic> json) {
-    return Customer(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      identifier: (json['identifier'] ?? json['email'] ?? json['phone'] ?? '')
-          .toString(),
-      role: json['role'] as String? ?? 'customer',
-      token: json['token'] as String?,
-    );
-  }
-
-  Customer copyWith({
+  Professional copyWith({
+    String? id,
     String? name,
-    String? identifier,
-    String? token,
+    String? imageUrl,
+    String? category,
+    String? description,
+    String? location,
+    int? startingPrice,
+    double? rating,
+    int? completedJobs,
+    bool? phoneVerified,
+    bool? idVerified,
+    bool? certificateVerified,
+    VerificationStatus? verificationStatus,
+    VerificationStatus? phoneVerificationStatus,
+    VerificationStatus? idVerificationStatus,
+    VerificationStatus? tvetVerificationStatus,
+    String? userId,
+    String? sector,
   }) {
-    return Customer(
-      id: id,
+    return Professional(
+      id: id ?? this.id,
       name: name ?? this.name,
-      identifier: identifier ?? this.identifier,
-      role: role,
-      token: token ?? this.token,
+      imageUrl: imageUrl ?? this.imageUrl,
+      category: category ?? this.category,
+      description: description ?? this.description,
+      location: location ?? this.location,
+      startingPrice: startingPrice ?? this.startingPrice,
+      rating: rating ?? this.rating,
+      completedJobs: completedJobs ?? this.completedJobs,
+      phoneVerified: phoneVerified ?? this.phoneVerified,
+      idVerified: idVerified ?? this.idVerified,
+      certificateVerified: certificateVerified ?? this.certificateVerified,
+      verificationStatus: verificationStatus ?? this.verificationStatus,
+      phoneVerificationStatus:
+          phoneVerificationStatus ?? this.phoneVerificationStatus,
+      idVerificationStatus: idVerificationStatus ?? this.idVerificationStatus,
+      tvetVerificationStatus:
+          tvetVerificationStatus ?? this.tvetVerificationStatus,
+      userId: userId ?? this.userId,
+      sector: sector ?? this.sector,
     );
   }
 }

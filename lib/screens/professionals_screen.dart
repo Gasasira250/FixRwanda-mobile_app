@@ -1,110 +1,123 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../models/professional.dart';
-import '../state/app_controller.dart';
-import '../theme/app_theme.dart';
-import '../widgets/professional_card.dart';
-
-class ProfessionalsArgs {
-  const ProfessionalsArgs({this.trade, this.query});
-
-  final String? trade;
-  final String? query;
-}
+import '../repositories/professional_repository.dart';
+import '../state/marketplace_controller.dart';
+import '../widgets/app_states.dart';
+import 'home_shell.dart';
 
 class ProfessionalsScreen extends StatefulWidget {
-  const ProfessionalsScreen({super.key, required this.args});
+  const ProfessionalsScreen({super.key, this.initial});
 
-  final ProfessionalsArgs args;
+  final ProfessionalFilter? initial;
 
   @override
   State<ProfessionalsScreen> createState() => _ProfessionalsScreenState();
 }
 
 class _ProfessionalsScreenState extends State<ProfessionalsScreen> {
-  late final TextEditingController _search;
-  List<Professional> _results = const [];
-  bool _loading = true;
+  late ProfessionalFilter filter;
+  bool loading = true;
 
   @override
   void initState() {
     super.initState();
-    _search = TextEditingController(text: widget.args.query ?? '');
+    filter = widget.initial ?? const ProfessionalFilter();
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
-  @override
-  void dispose() {
-    _search.dispose();
-    super.dispose();
-  }
-
   Future<void> _load() async {
-    setState(() => _loading = true);
-    final app = FixRwandaScope.of(context);
-    final results = await app.api.fetchProfessionals(
-      trade: widget.args.trade,
-      query: _search.text,
-    );
-    if (!mounted) return;
-    setState(() {
-      _results = results;
-      _loading = false;
-    });
+    setState(() => loading = true);
+    await context.read<MarketplaceController>().applyFilter(filter);
+    if (mounted) setState(() => loading = false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final title = widget.args.trade ?? 'Professionals';
+    final controller = context.watch<MarketplaceController>();
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
-      appBar: AppBar(title: Text(title)),
+      appBar: AppBar(
+        title: Text(filter.category ?? 'Professionals'),
+      ),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: TextField(
-              controller: _search,
-              textInputAction: TextInputAction.search,
-              onSubmitted: (_) => _load(),
-              decoration: InputDecoration(
-                hintText: 'Filter by name, area or skill',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: IconButton(
-                  onPressed: _load,
-                  icon: const Icon(Icons.tune),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Wrap(
+              spacing: 8,
+              children: [
+                FilterChip(
+                  label: const Text('Verified only'),
+                  selected: filter.verifiedOnly,
+                  onSelected: (value) {
+                    filter = filter.copyWith(verifiedOnly: value);
+                    _load();
+                  },
                 ),
-              ),
+                FilterChip(
+                  label: const Text('4.5+ rating'),
+                  selected: filter.minRating == 4.5,
+                  onSelected: (value) {
+                    filter = ProfessionalFilter(
+                      query: filter.query,
+                      category: filter.category,
+                      location: filter.location,
+                      minRating: value ? 4.5 : null,
+                      maxPrice: filter.maxPrice,
+                      verifiedOnly: filter.verifiedOnly,
+                      sort: filter.sort,
+                    );
+                    _load();
+                  },
+                ),
+                DropdownButton<ProfessionalSort>(
+                  value: filter.sort,
+                  items: const [
+                    DropdownMenuItem(
+                      value: ProfessionalSort.rating,
+                      child: Text('Top rated'),
+                    ),
+                    DropdownMenuItem(
+                      value: ProfessionalSort.priceLow,
+                      child: Text('Price: low'),
+                    ),
+                    DropdownMenuItem(
+                      value: ProfessionalSort.priceHigh,
+                      child: Text('Price: high'),
+                    ),
+                    DropdownMenuItem(
+                      value: ProfessionalSort.jobs,
+                      child: Text('Most jobs'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    filter = filter.copyWith(sort: value);
+                    _load();
+                  },
+                ),
+              ],
             ),
           ),
           Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _results.isEmpty
-                ? const Center(
-                    child: Text(
-                      'No professionals match that search.',
-                      style: TextStyle(color: AppColors.muted),
-                    ),
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                    itemCount: _results.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final professional = _results[index];
-                      return ProfessionalCard(
-                        professional: professional,
-                        wide: true,
-                        onViewProfile: () {
-                          Navigator.of(context).pushNamed(
-                            '/professional',
-                            arguments: professional,
+            child: loading
+                ? const LoadingView(message: 'Finding professionals...')
+                : controller.professionals.isEmpty
+                    ? const EmptyState(
+                        title: 'No matches',
+                        message:
+                            'Try another category, location, or remove a filter.',
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: controller.professionals.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 10),
+                        itemBuilder: (context, index) {
+                          return ProfessionalCard(
+                            professional: controller.professionals[index],
                           );
                         },
-                      );
-                    },
-                  ),
+                      ),
           ),
         ],
       ),

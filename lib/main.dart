@@ -1,27 +1,18 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_web_plugins/url_strategy.dart';
+import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 
 import 'app.dart';
-import 'state/app_controller.dart';
-import 'theme/app_theme.dart';
-import 'utils/google_maps_setup.dart';
+import 'data/local_marketplace_store.dart';
+import 'state/marketplace_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      statusBarBrightness: Brightness.dark,
-      systemNavigationBarColor: AppColors.primaryBlue,
-      systemNavigationBarIconBrightness: Brightness.light,
-    ),
-  );
   if (kIsWeb) {
     setUrlStrategy(HashUrlStrategy());
   }
-  await configureGoogleMapsAndroid();
-  runApp(FixRwandaApp(controller: AppController()));
+  final store = LocalMarketplaceStore();
+  await store.initialize();
+  final controller = MarketplaceController(store);
+  runApp(FixRwandaRoot(controller: controller));
 }

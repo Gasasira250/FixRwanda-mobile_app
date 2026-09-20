@@ -1,57 +1,51 @@
 # FixRwanda
 
-FixRwanda helps people in Rwanda find verified professionals, book a job, pay with MTN MoMo, Airtel Money or card, then track or cancel the booking.
+FixRwanda is a Kigali marketplace for finding, booking, paying, and reviewing verified local professionals. The market language is English. Prices are in RWF.
 
 **Live app:** https://gasasira250.github.io/FixRwanda-mobile_app/
 
-## Run
+## What you can do
 
-API:
+- Create an account and stay signed in on this device
+- Browse ten service categories
+- Filter professionals by trade, rating, price, and verification
+- Book only overall-verified professionals
+- Pay with MTN MoMo, Airtel Money, or card through a provider interface
+- Cancel with the published refund rules
+- Review a completed job once
 
-```powershell
-cd backend
-copy .env.example .env
-npm install
-npm start
-```
-
-- API: http://127.0.0.1:4000
-- Admin: http://127.0.0.1:4000/admin/
-- Health: http://127.0.0.1:4000/health
-
-Flutter:
+## Run the app
 
 ```powershell
+cd C:\Users\PC\OneDrive\Desktop\fixrwanda
 flutter pub get
-flutter run
+flutter run -d emulator-5554
 ```
 
-Android emulator uses `http://10.0.2.2:4000/api`. On a physical phone, pass your PC LAN address:
+In Android Studio, open `C:\Users\PC\OneDrive\Desktop\fixrwanda` and run `lib/main.dart`.
 
-```powershell
-flutter run -d <deviceId> --dart-define=API_BASE=http://192.168.1.10:4000/api
-```
+Sign-in credentials used by the local development store:
 
-```powershell
-flutter build apk --release
-```
+- Customer: `hannington@fixrwanda.rw` / `rwanda123`
+- Admin: `admin@fixrwanda.rw` / `admin123`
 
-## Accounts
+To see a declined payment, use a phone number ending in `0000`.
 
-| Role | Email / phone | Password |
-| --- | --- | --- |
-| Customer | `hannington@fixrwanda.rw` or `0780000000` | `demo123` |
-| Customer | `aline@fixrwanda.rw` | `demo123` |
-| Admin | `admin@fixrwanda.rw` | `admin123` |
+## Project layout
 
-## Layout
+- `lib/screens` UI
+- `lib/state` app state
+- `lib/repositories` contracts
+- `lib/data` local marketplace store
+- `lib/domain` booking, cancellation, and commission rules
+- `lib/payments` payment providers
+- `backend/sql/` planned database
+- `docs/` architecture, API plan, and testing notes
 
-```text
-lib/        Flutter app
-backend/   Express API
-admin/      Admin dashboard
-```
+## Verification
 
-```powershell
-flutter test
-```
+Phone, National ID, TVET, and overall status are stored as `pending`, `verified`, `rejected`, or `expired`. The app does not call live NIDA or TVET systems. Admin review happens in the verification queue.
+
+## Payment providers
+
+Mock MTN, Airtel, and card providers sit behind `PaymentGateway`. Swap those classes for live providers without changing booking screens. Do not put production MoMo secrets in this repository.

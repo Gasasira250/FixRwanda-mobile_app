@@ -1,184 +1,121 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../models/professional.dart';
-import '../theme/app_theme.dart';
-import '../utils/format.dart';
-import '../utils/launchers.dart';
-import '../widgets/app_surfaces.dart';
-import '../widgets/verified_badge.dart';
+import '../models/review.dart';
+import '../models/service.dart';
+import '../state/marketplace_controller.dart';
+import '../utils/money.dart';
+import '../widgets/app_states.dart';
+import '../widgets/verification_badges.dart';
+import 'booking_form_screen.dart';
 
-class ProfessionalDetailScreen extends StatelessWidget {
-  const ProfessionalDetailScreen({super.key, required this.professional});
+class ProfessionalDetailScreen extends StatefulWidget {
+  const ProfessionalDetailScreen({super.key, required this.professionalId});
 
-  final Professional professional;
+  final String professionalId;
 
   @override
-  Widget build(BuildContext context) {
-    final canBook = professional.isVerifiedProfessional;
-    return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
-      appBar: AppBar(title: const Text('Professional')),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-        children: [
-          SurfaceCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  professional.name,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.darkSlate,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '${professional.trade} • ${professional.location}',
-                  style: const TextStyle(color: AppColors.muted, fontSize: 16),
-                ),
-                const SizedBox(height: 12),
-                VerifiedBadge(professional: professional),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              _Stat(
-                label: 'Rating',
-                value: professional.rating.toStringAsFixed(1),
-                accent: AppColors.sunYellow,
-              ),
-              _Stat(label: 'Jobs', value: '${professional.jobsCompleted}'),
-              _Stat(
-                label: 'From',
-                value: formatRwf(professional.serviceFeeRwf),
-                accent: AppColors.primaryBlue,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () async {
-                    final phone = rwandaContactFor(professional.id);
-                    final ok = await makePhoneCall(phone);
-                    if (!context.mounted) return;
-                    await showLaunchResult(
-                      context,
-                      ok: ok,
-                      fallback:
-                          'Call $phone from a phone to reach this professional.',
-                    );
-                  },
-                  icon: const Icon(Icons.call),
-                  label: const Text('Call'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () async {
-                    final phone = rwandaContactFor(professional.id);
-                    final ok = await sendSms(
-                      phone,
-                      body:
-                          'Hello ${professional.name}, I found you on FixRwanda.',
-                    );
-                    if (!context.mounted) return;
-                    await showLaunchResult(
-                      context,
-                      ok: ok,
-                      fallback:
-                          'SMS $phone from a phone to message this professional.',
-                    );
-                  },
-                  icon: const Icon(Icons.sms_outlined),
-                  label: const Text('SMS'),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          const SectionHeader(title: 'Verification'),
-          const SizedBox(height: 8),
-          Text(
-            canBook
-                ? 'This professional has passed ID and TVET verification and can be booked.'
-                : 'This professional is still under review and cannot be booked yet.',
-            style: const TextStyle(color: AppColors.muted, height: 1.4),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'TVET: ${professional.tvetVerified ? 'verified' : 'not verified'}  •  National ID: ${professional.idVerified ? 'verified' : 'not verified'}',
-          ),
-          const SizedBox(height: 20),
-          const SectionHeader(title: 'About'),
-          const SizedBox(height: 8),
-          Text(professional.about, style: const TextStyle(height: 1.4)),
-          const SizedBox(height: 20),
-          const SectionHeader(title: 'Services'),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final service in professional.services)
-                Chip(label: Text(service)),
-            ],
-          ),
-          const SizedBox(height: 28),
-          FilledButton(
-            onPressed: canBook
-                ? () => Navigator.of(context).pushNamed(
-                    '/booking',
-                    arguments: professional,
-                  )
-                : null,
-            child: Text(canBook ? 'Book now' : 'Not yet verified'),
-          ),
-        ],
-      ),
-    );
-  }
+  State<ProfessionalDetailScreen> createState() =>
+      _ProfessionalDetailScreenState();
 }
 
-class _Stat extends StatelessWidget {
-  const _Stat({required this.label, required this.value, this.accent});
+class _ProfessionalDetailScreenState extends State<ProfessionalDetailScreen> {
+  Professional? professional;
+  List<Service> services = const [];
+  List<Review> reviews = const [];
+  bool loading = true;
 
-  final String label;
-  final String value;
-  final Color? accent;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  Future<void> _load() async {
+    final controller = context.read<MarketplaceController>();
+    final found = await controller.professionalById(widget.professionalId);
+    final nextReviews = await controller.reviewsFor(widget.professionalId);
+    if (!mounted) return;
+    setState(() {
+      professional = found;
+      services = found == null
+          ? const []
+          : controller.servicesFor(found.id);
+      reviews = nextReviews;
+      loading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.only(right: 8),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: AppShadows.card,
+    if (loading) {
+      return const Scaffold(body: LoadingView());
+    }
+    final item = professional;
+    if (item == null) {
+      return const Scaffold(
+        body: EmptyState(
+          title: 'Not found',
+          message: 'This professional is no longer available.',
         ),
-        child: Column(
-          children: [
-            Text(
-              value,
-              style: TextStyle(
-                fontWeight: FontWeight.w800,
-                fontSize: 14,
-                color: accent ?? AppColors.darkSlate,
+      );
+    }
+    return Scaffold(
+      appBar: AppBar(title: Text(item.name)),
+      body: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          Text(item.category, style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 6),
+          Text('${item.sector ?? item.location} · ${item.completedJobs} jobs'),
+          const SizedBox(height: 12),
+          VerificationBadges(professional: item),
+          const SizedBox(height: 16),
+          Text(item.description),
+          const SizedBox(height: 20),
+          Text('Services', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          ...services.map(
+            (service) => Card(
+              child: ListTile(
+                title: Text(service.name),
+                subtitle: Text(service.description),
+                trailing: Text(Money.rwf(service.priceRwf)),
               ),
             ),
-            const SizedBox(height: 4),
-            Text(label, style: const TextStyle(color: AppColors.muted)),
-          ],
-        ),
+          ),
+          const SizedBox(height: 20),
+          Text('Reviews', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          if (reviews.isEmpty)
+            const Text('No reviews yet. Completed jobs can be reviewed.')
+          else
+            ...reviews.map(
+              (review) => ListTile(
+                leading: const Icon(Icons.star_rounded, color: Color(0xFFF59E0B)),
+                title: Text('${review.rating}/5'),
+                subtitle: Text(review.comment),
+              ),
+            ),
+          const SizedBox(height: 24),
+          if (!item.isBookable)
+            const ErrorBanner(
+              message:
+                  'This professional is still under verification and cannot be booked yet.',
+            )
+          else
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => BookingFormScreen(professional: item),
+                  ),
+                );
+              },
+              child: const Text('Book this professional'),
+            ),
+        ],
       ),
     );
   }

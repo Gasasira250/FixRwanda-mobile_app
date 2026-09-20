@@ -1,10 +1,9 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../state/app_controller.dart';
+import '../state/marketplace_controller.dart';
 import '../theme/app_theme.dart';
-import '../widgets/app_surfaces.dart';
+import '../utils/constants.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -14,79 +13,53 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  Timer? _timer;
-
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _open());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _boot());
   }
 
-  Future<void> _open() async {
-    final app = FixRwandaScope.of(context);
-    await app.restoreSession();
+  Future<void> _boot() async {
+    final controller = context.read<MarketplaceController>();
+    await controller.boot();
     if (!mounted) return;
-    await app.api.discover();
-    if (!mounted) return;
-    _timer = Timer(const Duration(milliseconds: 400), () {
-      if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed(
-        app.isSignedIn ? '/home' : '/login',
-      );
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
+    Navigator.of(context).pushReplacementNamed(
+      controller.isSignedIn ? '/home' : '/login',
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppColors.skyDark, AppColors.primaryBlue],
-          ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const BrandMark(size: 84),
-                const SizedBox(height: 22),
-                const Text(
-                  'FixRwanda',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Container(
-                  width: 56,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.sunYellow,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                const Text(
-                  'Verified professionals, booked in minutes.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Color(0xFFD6E6F7), fontSize: 15),
-                ),
-              ],
+      backgroundColor: AppTheme.primaryColor,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                color: AppTheme.secondaryColor,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: const Icon(Icons.handyman_rounded, size: 44),
             ),
-          ),
+            const SizedBox(height: 20),
+            const Text(
+              AppConstants.appName,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Kigali marketplace for verified professionals',
+              style: TextStyle(color: Colors.white70),
+            ),
+          ],
         ),
       ),
     );

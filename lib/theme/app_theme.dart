@@ -7,6 +7,7 @@ class AppTheme {
   static const Color secondaryColor = Color(0xFFFAD201);
   static const Color accentGreen = Color(0xFF208A42);
   static const Color backgroundColor = Color(0xFFF8FAFC);
+  static const Color canvas = Color(0xFFEFEFEF);
   static const Color textColor = Color(0xFF1A1A1A);
   static const Color mutedTextColor = Color(0xFF6B7280);
 

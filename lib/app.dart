@@ -16,6 +16,7 @@ import 'screens/tracking_screen.dart';
 import 'state/marketplace_controller.dart';
 import 'theme/app_theme.dart';
 import 'utils/constants.dart';
+import 'widgets/phone_frame.dart';
 
 class FixRwandaApp extends StatelessWidget {
   const FixRwandaApp({super.key});
@@ -26,6 +27,14 @@ class FixRwandaApp extends StatelessWidget {
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      builder: (context, child) {
+        final content = child ?? const SizedBox.shrink();
+        if (!PhoneFrame.isEnabled) return content;
+        return ColoredBox(
+          color: AppTheme.canvas,
+          child: PhoneFrame(child: content),
+        );
+      },
       initialRoute: '/',
       onGenerateRoute: (settings) {
         switch (settings.name) {

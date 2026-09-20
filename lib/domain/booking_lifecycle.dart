@@ -9,13 +9,39 @@ class InvalidBookingTransition implements Exception {
 
 class BookingLifecycle {
   static const allowed = <BookingStatus, Set<BookingStatus>>{
-    BookingStatus.pending: {BookingStatus.confirmed, BookingStatus.cancelled},
-    BookingStatus.confirmed: {BookingStatus.enRoute, BookingStatus.cancelled},
-    BookingStatus.enRoute: {BookingStatus.arrived, BookingStatus.cancelled},
-    BookingStatus.arrived: {BookingStatus.inProgress, BookingStatus.cancelled},
-    BookingStatus.inProgress: {BookingStatus.completed},
-    BookingStatus.completed: {},
+    BookingStatus.pending: {
+      BookingStatus.broadcasting,
+      BookingStatus.cancelled,
+    },
+    BookingStatus.broadcasting: {
+      BookingStatus.accepted,
+      BookingStatus.cancelled,
+      BookingStatus.expired,
+    },
+    BookingStatus.accepted: {
+      BookingStatus.enRoute,
+      BookingStatus.cancelled,
+    },
+    BookingStatus.enRoute: {
+      BookingStatus.arrived,
+      BookingStatus.cancelled,
+    },
+    BookingStatus.arrived: {
+      BookingStatus.inProgress,
+      BookingStatus.cancelled,
+    },
+    BookingStatus.inProgress: {
+      BookingStatus.completed,
+      BookingStatus.disputed,
+    },
+    BookingStatus.awaitingOtp: {BookingStatus.completed, BookingStatus.disputed},
+    BookingStatus.completed: {BookingStatus.disputed},
+    BookingStatus.disputed: {
+      BookingStatus.completed,
+      BookingStatus.cancelled,
+    },
     BookingStatus.cancelled: {},
+    BookingStatus.expired: {},
   };
 
   static bool canTransition(BookingStatus from, BookingStatus to) {
@@ -33,12 +59,11 @@ class BookingLifecycle {
 
   static BookingStatus? nextProfessionalStatus(BookingStatus status) {
     return switch (status) {
-      BookingStatus.pending => BookingStatus.confirmed,
-      BookingStatus.confirmed => BookingStatus.enRoute,
+      BookingStatus.accepted => BookingStatus.enRoute,
       BookingStatus.enRoute => BookingStatus.arrived,
       BookingStatus.arrived => BookingStatus.inProgress,
       BookingStatus.inProgress => BookingStatus.completed,
-      BookingStatus.completed || BookingStatus.cancelled => null,
+      _ => null,
     };
   }
 }

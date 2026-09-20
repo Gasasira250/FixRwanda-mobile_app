@@ -1,52 +1,48 @@
 # Architecture
 
-FixRwanda is a Kigali, English-language marketplace. Customers search verified professionals, book a visit, pay, track job status, cancel under published rules, and leave one review after completion.
+FixRwanda is a Kigali, English-language marketplace. Customers search verified professionals, book a visit, pay into escrow, track the technician, cancel under published rules, and leave one review after completion.
 
 ## Layers
 
 ```
 UI (screens, widgets)
   -> MarketplaceController (state)
-    -> Repositories (auth, professionals, bookings, reviews, admin)
-      -> Domain (lifecycle, cancellation, commission)
-      -> PaymentGateway / PaymentProvider
+    -> Repositories (auth, professionals, bookings, reviews, admin, verification)
+      -> Domain (lifecycle, broadcast, cancellation, commission, NIDA, verification pipeline)
+      -> EscrowService / LocationSource
         -> LocalMarketplaceStore today
-        -> HTTP API later
-          -> PostgreSQL
+        -> Express API + PostgreSQL (`backend/`)
 ```
 
-UI never talks to payment providers or SQL. Booking status changes go through `BookingLifecycle`. Refunds go through `CancellationPolicy`. Commission is calculated by `CommissionService` (10–15%).
+UI never talks to payment providers or SQL. Booking status changes go through `BookingLifecycle`. Client funds sit in `EscrowService` (MTN MoMo Collection `RequestToPay` and Disbursement `Transfer`, or IremboPay). Refunds go through `CancellationPolicy`. Commission is 15% marketplace / 85% provider, released only after the provider enters the 4-digit code from the client screen.
 
-## Booking status
+## Job and escrow lifecycle
 
-`pending -> confirmed -> enRoute -> arrived -> inProgress -> completed`
+`pending -> broadcasting -> accepted -> enRoute -> arrived -> inProgress (before photo + OTP) -> completed`
 
-Cancellation is allowed from `pending`, `confirmed`, `enRoute`, and `arrived`. It is not allowed from `inProgress` or `completed`.
+Disputes can open from `inProgress`. Admin can refund escrow or override payout.
 
-Refunds:
+Payment states: `INITIATED -> HELD_IN_ESCROW -> DISBURSED_TO_PROVIDER | REFUNDED`.
 
-- Confirmed / pending, professional not travelling: full refund
-- En route or arrived: 2,000 RWF transport fee, remainder refunded
-- In progress or completed: no cancellation
-
-Failed payments leave the booking in `pending`. Successful payments move it to `confirmed` and record commission.
+Cash to the technician is not allowed. After escrow, the closest verified technician in Gasabo, Kicukiro, or Nyarugenge is offered first. If they do not accept in 15 minutes, the next 3 closest verified providers are offered. If nobody remains, the request expires and escrow is refunded.
 
 ## Verification
 
-Each professional has phone, National ID, TVET, and overall status. Overall `verified` is required before booking. These flags are reviewed in-app. They are not live government API results.
+Providers complete NIDA + Smile ID liveness, an Irembo Good Conduct Certificate, and a TVET/IPRC diploma or RDB registration. The Kigali Green Badge is issued only when all three pass. Only badge holders receive job offers.
 
 ## Location
 
-Bookings store district, sector, and street address, with optional lat/lng in the planned schema.
+While status is `EN_ROUTE`, the provider app sends live coordinates through `geolocator`. The Node API streams them over socket.io.
 
 ## Status of this build
 
 | Area | Status |
 | --- | --- |
-| Customer search, book, pay, cancel, review | Implemented against local store |
-| Auth session persistence | Implemented with `shared_preferences` |
-| Payment providers | Mocked; interface is ready for live MTN/Airtel/card |
-| Admin verification queue | Implemented locally |
-| Hosted API + PostgreSQL | Planned (`backend/sql/schema.sql`) |
-| Live technician GPS | Planned |
-| NIDA / TVET APIs | Not connected |
+| Customer search, book, pay, cancel, review | Implemented |
+| Auth session persistence | `shared_preferences` |
+| Escrow + 15-minute cascade + completion OTP | Implemented |
+| Provider verification pipeline + Green Badge | Implemented |
+| Live technician GPS | Implemented (`geolocator` + socket.io) |
+| Admin disputes, photos, chat, refund/payout | Implemented |
+| Payment providers | Mocked; same interface for live MTN/IremboPay |
+| Hosted API + PostgreSQL | Schema and Express controllers in `backend/` |

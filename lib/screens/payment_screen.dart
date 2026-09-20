@@ -63,12 +63,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
             Text(
               booking == null
                   ? 'Confirm payment'
-                  : 'Pay ${Money.rwf(booking.servicePrice)}',
+                  : 'Hold ${Money.rwf(booking.servicePrice)} in escrow',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 8),
             const Text(
-              'MTN MoMo, Airtel Money and card providers are abstracted so live credentials can be added later. Numbers ending in 0000 are declined.',
+              'MoMo is pre-authorised into FixRwanda escrow. The technician is paid 85% only after you confirm with a 4-digit OTP. Cash to the provider is not allowed. Numbers ending in 0000 are declined.',
             ),
             const SizedBox(height: 16),
             RadioGroup<PaymentMethod>(

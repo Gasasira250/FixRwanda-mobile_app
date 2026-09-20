@@ -8,7 +8,7 @@ import '../state/marketplace_controller.dart';
 import '../utils/money.dart';
 import '../widgets/app_states.dart';
 import '../widgets/verification_badges.dart';
-import 'booking_form_screen.dart';
+import 'job_request_screen.dart';
 
 class ProfessionalDetailScreen extends StatefulWidget {
   const ProfessionalDetailScreen({super.key, required this.professionalId});
@@ -71,6 +71,10 @@ class _ProfessionalDetailScreenState extends State<ProfessionalDetailScreen> {
           Text('${item.sector ?? item.location} · ${item.completedJobs} jobs'),
           const SizedBox(height: 12),
           VerificationBadges(professional: item),
+          if (item.kigaliGreenBadge) ...[
+            const SizedBox(height: 8),
+            const Text('This technician holds the Kigali Green Badge.'),
+          ],
           const SizedBox(height: 16),
           Text(item.description),
           const SizedBox(height: 20),
@@ -109,11 +113,14 @@ class _ProfessionalDetailScreenState extends State<ProfessionalDetailScreen> {
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => BookingFormScreen(professional: item),
+                    builder: (_) => JobRequestScreen(
+                      category: item.category,
+                      basePrice: item.startingPrice,
+                    ),
                   ),
                 );
               },
-              child: const Text('Book this professional'),
+              child: const Text('Request this trade'),
             ),
         ],
       ),

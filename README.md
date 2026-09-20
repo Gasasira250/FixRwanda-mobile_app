@@ -2,50 +2,42 @@
 
 FixRwanda is a Kigali marketplace for finding, booking, paying, and reviewing verified local professionals. The market language is English. Prices are in RWF.
 
-**Live app:** https://gasasira250.github.io/FixRwanda-mobile_app/
+**Live app:** https://gasasira250.github.io/FixRwanda-mobile_app/  
+**Install on phone:** https://gasasira250.github.io/FixRwanda-mobile_app/install.html  
+**Android APK:** https://github.com/Gasasira250/FixRwanda-mobile_app/releases/latest
 
 ## What you can do
 
-- Create an account and stay signed in on this device
-- Browse ten service categories
-- Filter professionals by trade, rating, price, and verification
-- Book only overall-verified professionals
-- Pay with MTN MoMo, Airtel Money, or card through a provider interface
-- Cancel with the published refund rules
-- Review a completed job once
+- Search verified technicians in Gasabo, Kicukiro, and Nyarugenge
+- Hold payment in escrow (MTN MoMo / IremboPay interface). Cash to the technician is not allowed
+- Offer the closest Kigali Green Badge provider first; if they do not accept in 15 minutes, route to the next 3 closest
+- Show a 4-digit code on the client screen; the provider must enter it to receive 85%
+- Track the technician live while they are en route
+- Complete NIDA, Irembo good-conduct, and TVET/RDB verification to earn the Kigali Green Badge
+- Open a dispute; admin can refund escrow or override payout
 
 ## Run the app
 
 ```powershell
-cd C:\Users\PC\OneDrive\Desktop\fixrwanda
+cd C:\Users\PC\OneDrive\Desktop\fix_rwanda
 flutter pub get
-flutter run -d emulator-5554
+flutter run
 ```
 
-In Android Studio, open `C:\Users\PC\OneDrive\Desktop\fixrwanda` and run `lib/main.dart`.
+In Android Studio, open this folder and run `lib/main.dart`.
 
-Sign-in credentials used by the local development store:
+Local store sign-in:
 
 - Customer: `hannington@fixrwanda.rw` / `rwanda123`
+- Provider: `jean@fixrwanda.rw` / `rwanda123`
 - Admin: `admin@fixrwanda.rw` / `admin123`
 
-To see a declined payment, use a phone number ending in `0000`.
+To see a declined MoMo collection, use a phone number ending in `0000`.
 
 ## Project layout
 
-- `lib/screens` UI
-- `lib/state` app state
-- `lib/repositories` contracts
-- `lib/data` local marketplace store
-- `lib/domain` booking, cancellation, and commission rules
-- `lib/payments` payment providers
-- `backend/sql/` planned database
+- `lib/screens` UI including live tracker, OTP, onboarding, admin disputes
+- `lib/domain` booking lifecycle, broadcast router, NIDA, verification pipeline
+- `lib/payments` escrow (Collection + Disbursement)
+- `backend/src` Express API, socket.io, MoMo escrow controllers
 - `docs/` architecture, API plan, and testing notes
-
-## Verification
-
-Phone, National ID, TVET, and overall status are stored as `pending`, `verified`, `rejected`, or `expired`. The app does not call live NIDA or TVET systems. Admin review happens in the verification queue.
-
-## Payment providers
-
-Mock MTN, Airtel, and card providers sit behind `PaymentGateway`. Swap those classes for live providers without changing booking screens. Do not put production MoMo secrets in this repository.

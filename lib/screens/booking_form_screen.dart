@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../data/catalog_services.dart';
+import '../domain/broadcast_router.dart';
 import '../models/professional.dart';
 import '../models/service.dart';
 import '../repositories/booking_repository.dart';
@@ -24,13 +24,16 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
   Service? selected;
   DateTime date = DateTime.now().add(const Duration(days: 1));
   String time = '09:00';
-  String sector = kigaliSectors.first;
+  late String district;
   final address = TextEditingController();
   final formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
     super.initState();
+    district = kigaliDistricts.contains(widget.professional.district)
+        ? widget.professional.district
+        : kigaliDistricts.first;
     services = context
         .read<MarketplaceController>()
         .servicesFor(widget.professional.id);
@@ -51,12 +54,13 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
         professionalId: widget.professional.id,
         serviceId: selected!.id,
         serviceName: selected!.name,
+        category: widget.professional.category,
         scheduledDate: date,
         scheduledTime: time,
         customerAddress: address.text.trim(),
         servicePrice: selected!.priceRwf,
-        district: 'Kigali',
-        sector: sector,
+        district: district,
+        sector: district,
       ),
     );
     if (!mounted || booking == null) return;
@@ -124,13 +128,13 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              initialValue: sector,
+              initialValue: district,
               items: [
-                for (final item in kigaliSectors)
+                for (final item in kigaliDistricts)
                   DropdownMenuItem(value: item, child: Text(item)),
               ],
-              onChanged: (value) => setState(() => sector = value ?? sector),
-              decoration: const InputDecoration(labelText: 'Sector'),
+              onChanged: (value) => setState(() => district = value ?? district),
+              decoration: const InputDecoration(labelText: 'District'),
             ),
             const SizedBox(height: 12),
             TextFormField(

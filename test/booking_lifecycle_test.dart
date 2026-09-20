@@ -3,30 +3,54 @@ import 'package:fixrwanda/domain/booking_lifecycle.dart';
 import 'package:fixrwanda/models/booking.dart';
 
 void main() {
-  test('allows pending to confirmed and confirmed to enRoute', () {
+  test('pending escrow can broadcast, then a provider can accept', () {
     expect(
       BookingLifecycle.canTransition(
         BookingStatus.pending,
-        BookingStatus.confirmed,
+        BookingStatus.broadcasting,
       ),
       isTrue,
     );
     expect(
       BookingLifecycle.transition(
-        BookingStatus.confirmed,
-        BookingStatus.enRoute,
+        BookingStatus.broadcasting,
+        BookingStatus.accepted,
       ),
-      BookingStatus.enRoute,
+      BookingStatus.accepted,
     );
   });
 
-  test('rejects completed to cancelled', () {
+  test('inProgress completes after the provider OTP gate', () {
     expect(
-      () => BookingLifecycle.transition(
+      BookingLifecycle.canTransition(
+        BookingStatus.inProgress,
         BookingStatus.completed,
+      ),
+      isTrue,
+    );
+    expect(
+      BookingLifecycle.canTransition(
+        BookingStatus.awaitingOtp,
+        BookingStatus.completed,
+      ),
+      isTrue,
+    );
+  });
+
+  test('inProgress can be disputed for admin review', () {
+    expect(
+      BookingLifecycle.canTransition(
+        BookingStatus.inProgress,
+        BookingStatus.disputed,
+      ),
+      isTrue,
+    );
+    expect(
+      BookingLifecycle.canTransition(
+        BookingStatus.disputed,
         BookingStatus.cancelled,
       ),
-      throwsA(isA<InvalidBookingTransition>()),
+      isTrue,
     );
   });
 

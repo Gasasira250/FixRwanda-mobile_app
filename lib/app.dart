@@ -8,9 +8,11 @@ import 'screens/home_shell.dart';
 import 'screens/login_screen.dart';
 import 'screens/payment_screen.dart';
 import 'screens/professional_detail_screen.dart';
+import 'screens/provider_onboarding_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/review_screen.dart';
 import 'screens/splash_screen.dart';
+import 'screens/tracking_screen.dart';
 import 'state/marketplace_controller.dart';
 import 'theme/app_theme.dart';
 import 'utils/constants.dart';
@@ -39,6 +41,10 @@ class FixRwandaApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => const SettingsScreen());
           case '/admin':
             return MaterialPageRoute(builder: (_) => const AdminScreen());
+          case '/onboarding':
+            return MaterialPageRoute(
+              builder: (_) => const ProviderOnboardingScreen(),
+            );
           case '/professional':
             final id = settings.arguments as String? ?? '';
             return MaterialPageRoute(
@@ -53,6 +59,11 @@ class FixRwandaApp extends StatelessWidget {
             final id = settings.arguments as String? ?? '';
             return MaterialPageRoute(
               builder: (_) => PaymentScreen(bookingId: id),
+            );
+          case '/tracking':
+            final id = settings.arguments as String? ?? '';
+            return MaterialPageRoute(
+              builder: (_) => TrackingScreen(bookingId: id),
             );
           case '/review':
             final id = settings.arguments as String? ?? '';

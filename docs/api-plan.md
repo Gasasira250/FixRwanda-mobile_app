@@ -1,30 +1,32 @@
 # API plan
 
-The Flutter app uses `LocalMarketplaceStore` today. The contracts in `lib/repositories` are the API surface to host later.
+The Flutter app uses `LocalMarketplaceStore` today. Express controllers in `backend/src` are the hosted contracts.
 
-## Planned endpoints
+## Endpoints
 
 | Method | Path | Auth | Notes |
 | --- | --- | --- | --- |
 | POST | `/auth/signup` | No | Create customer or professional |
 | POST | `/auth/login` | No | Email/phone + password, JWT |
 | GET | `/me` | Yes | Current user |
-| GET | `/professionals` | No | `q`, `category`, `location`, `minRating`, `maxPrice`, `verifiedOnly`, `sort` |
-| GET | `/professionals/:id` | No | Profile, services, reviews |
-| POST | `/bookings` | Customer | Creates `pending` booking |
-| GET | `/bookings` | Customer | Own bookings |
-| GET | `/bookings/:id` | Owner/admin | Detail |
-| POST | `/bookings/:id/pay` | Customer | Charge via configured provider |
-| POST | `/bookings/:id/cancel` | Customer | Server calculates fee/refund |
-| POST | `/bookings/:id/status` | Professional/admin | Valid transitions only |
-| POST | `/reviews` | Customer | Completed booking, one review |
+| GET | `/professionals` | No | Filters including verified / green badge |
+| POST | `/bookings` | Customer | Creates `pending` / `REQUESTED` booking |
+| POST | `/bookings/:id/pay` | Customer | MTN Collection `RequestToPay` |
+| POST | `/webhooks/momo/collection` | Provider | Sets `HELD_IN_ESCROW` and starts broadcast |
+| POST | `/bookings/:id/complete` | Provider | OTP then Disbursement `Transfer` of 85% |
+| POST | `/bookings/:id/location` | Provider | Live EN_ROUTE coordinates |
+| POST | `/bookings/:id/dispute` | Customer | Opens `DISPUTED` while escrow is held |
+| POST | `/admin/bookings/:id/refund` | Admin | Manual escrow refund |
+| POST | `/admin/bookings/:id/payout` | Admin | Manual payout override |
 | GET | `/admin/verifications` | Admin | Pending professionals |
-| POST | `/admin/verifications/:id` | Admin | `verified` or `rejected` |
+| POST | `/reviews` | Customer | Completed booking, one review |
+
+Socket.io events: `join_job`, `provider_location`, `location`.
 
 ## Payments
 
-`POST /bookings/:id/pay` should call the configured MTN, Airtel, or card provider. Until live credentials exist, keep mock providers behind the same interface. Never store production secrets in git.
+Until live credentials exist, keep mock MoMo behind the same interface. Numbers ending in `0000` fail collection. Never store production secrets in git.
 
 ## Database
 
-See `backend/sql/schema.sql` for `users`, `professionals`, `services`, `professional_services`, `verifications`, `bookings`, `payments`, `reviews`, `commissions`, and `refunds`.
+See `backend/sql/schema.sql` for escrow payment states, OTP, before/after photos, disputes, and location pings.

@@ -6,6 +6,9 @@ import bcrypt from 'bcryptjs';
 import cors from 'cors';
 import express from 'express';
 import jwt from 'jsonwebtoken';
+import http from 'node:http';
+import { createRequire } from 'node:module';
+import { Server } from 'socket.io';
 import { initDb, state } from './db.js';
 import {
   isValidMoMoPhone,
@@ -341,6 +344,111 @@ app.get('/api/admin/bookings', auth('admin'), async (req, res) => {
   res.json({ bookings: await listBookings(user) });
 });
 
+const require = createRequire(import.meta.url);
+const {
+  requestToPay,
+  applyCollectionWebhook,
+  transferToProvider,
+} = require('./payment_service.cjs');
+const { openDispute, adminRefund, adminPayout } = require('./dispute_controller.cjs');
+const { attachRealtime } = require('./realtime.cjs');
+
+app.post('/api/bookings/:id/pay', auth(), async (req, res) => {
+  const booking = await findBooking(req.params.id);
+  if (!booking) return res.status(404).json({ message: 'Booking not found.' });
+  try {
+    const collection = requestToPay({
+      bookingId: booking.id,
+      amountRwf: booking.service_fee_rwf || booking.amount_rwf || req.body.amount,
+      msisdn: req.body.msisdn || req.body.phoneNumber,
+    });
+    booking.payment_state = collection.payment_state;
+    await saveBooking(booking);
+    res.json({ booking, collection });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+app.post('/webhooks/momo/collection', async (req, res) => {
+  const booking = await findBooking(req.body.bookingId);
+  if (!booking) return res.status(404).json({ message: 'Booking not found.' });
+  const result = applyCollectionWebhook(booking, req.body);
+  Object.assign(booking, result.booking);
+  const saved = await saveBooking(booking);
+  res.json({ booking: saved, held: result.held });
+});
+
+app.post('/api/bookings/:id/complete', auth(), async (req, res) => {
+  const booking = await findBooking(req.params.id);
+  if (!booking) return res.status(404).json({ message: 'Booking not found.' });
+  try {
+    const result = transferToProvider(booking, {
+      otp: req.body.otp,
+      providerMsisdn: req.body.providerMsisdn,
+    });
+    Object.assign(booking, result.booking);
+    const saved = await saveBooking(booking);
+    res.json({ booking: saved, payout: result.payout, disbursement: result.disbursement });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+app.post('/api/bookings/:id/dispute', auth(), async (req, res) => {
+  const booking = await findBooking(req.params.id);
+  if (!booking) return res.status(404).json({ message: 'Booking not found.' });
+  try {
+    const next = openDispute(booking, req.body);
+    Object.assign(booking, next);
+    res.json({ booking: await saveBooking(booking) });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+app.post('/api/admin/bookings/:id/refund', auth('admin'), async (req, res) => {
+  const booking = await findBooking(req.params.id);
+  if (!booking) return res.status(404).json({ message: 'Booking not found.' });
+  try {
+    const result = adminRefund(booking);
+    Object.assign(booking, result.booking);
+    res.json({ booking: await saveBooking(booking) });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+app.post('/api/admin/bookings/:id/payout', auth('admin'), async (req, res) => {
+  const booking = await findBooking(req.params.id);
+  if (!booking) return res.status(404).json({ message: 'Booking not found.' });
+  try {
+    const result = adminPayout(booking);
+    Object.assign(booking, result.booking);
+    res.json({ booking: await saveBooking(booking), payout: result.payout });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+app.post('/api/bookings/:id/location', auth(), async (req, res) => {
+  const booking = await findBooking(req.params.id);
+  if (!booking) return res.status(404).json({ message: 'Booking not found.' });
+  booking.provider_latitude = req.body.lat;
+  booking.provider_longitude = req.body.lng;
+  booking.last_location_at = new Date().toISOString();
+  const saved = await saveBooking(booking);
+  if (app.get('io')) {
+    app.get('io').to(`job:${booking.id}`).emit('location', {
+      bookingId: booking.id,
+      lat: req.body.lat,
+      lng: req.body.lng,
+      at: booking.last_location_at,
+    });
+  }
+  res.json({ booking: saved });
+});
+
 app.use((error, _req, res, _next) => {
   console.error(error);
   res.status(500).json({ message: 'Server error.' });
@@ -349,7 +457,12 @@ app.use((error, _req, res, _next) => {
 await initDb();
 await seed();
 
-app.listen(PORT, '0.0.0.0', () => {
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: '*' } });
+attachRealtime(io);
+app.set('io', io);
+
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`FixRwanda API on http://127.0.0.1:${PORT}`);
   console.log(`Admin dashboard on http://127.0.0.1:${PORT}/admin/`);
   console.log(`Database engine: ${state.engine}`);

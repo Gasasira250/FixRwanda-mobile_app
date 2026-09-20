@@ -1,3 +1,5 @@
+import 'provider_verification.dart';
+
 enum VerificationStatus {
   pending,
   verified,
@@ -22,8 +24,20 @@ class Professional {
   final VerificationStatus phoneVerificationStatus;
   final VerificationStatus idVerificationStatus;
   final VerificationStatus tvetVerificationStatus;
+  final VerificationStatus iremboVerificationStatus;
+  final VerificationStatus livenessVerificationStatus;
+  final bool kigaliGreenBadge;
+  final String? nidaNumber;
+  final String? iremboCertUrl;
+  final String? tradeCertUrl;
+  final TradeCertificateKind? tradeCertKind;
+  final String? livenessSelfieRef;
+  final String? smileJobId;
   final String? userId;
   final String? sector;
+  final String district;
+  final double latitude;
+  final double longitude;
 
   const Professional({
     required this.id,
@@ -42,11 +56,63 @@ class Professional {
     this.phoneVerificationStatus = VerificationStatus.pending,
     this.idVerificationStatus = VerificationStatus.pending,
     this.tvetVerificationStatus = VerificationStatus.pending,
+    this.iremboVerificationStatus = VerificationStatus.pending,
+    this.livenessVerificationStatus = VerificationStatus.pending,
+    this.kigaliGreenBadge = false,
+    this.nidaNumber,
+    this.iremboCertUrl,
+    this.tradeCertUrl,
+    this.tradeCertKind,
+    this.livenessSelfieRef,
+    this.smileJobId,
     this.userId,
     this.sector,
+    this.district = 'Gasabo',
+    this.latitude = -1.932,
+    this.longitude = 30.099,
   });
 
-  bool get isBookable => verificationStatus == VerificationStatus.verified;
+  bool get isBookable =>
+      verificationStatus == VerificationStatus.verified && kigaliGreenBadge;
+
+  ProviderVerification get pipeline => ProviderVerification(
+        providerId: id,
+        overallStatus: verificationStatus,
+        kigaliGreenBadge: kigaliGreenBadge,
+        nidaStatus: idVerificationStatus,
+        livenessStatus: livenessVerificationStatus,
+        iremboStatus: iremboVerificationStatus,
+        tradeStatus: tvetVerificationStatus,
+        nidaNumber: nidaNumber,
+        iremboCertUrl: iremboCertUrl,
+        tradeCertUrl: tradeCertUrl,
+        tradeKind: tradeCertKind,
+        livenessSelfieRef: livenessSelfieRef,
+        smileJobId: smileJobId,
+      );
+
+  Map<String, dynamic> get verificationFlag => pipeline.toJson();
+
+  Professional applyPipeline(ProviderVerification next) {
+    return copyWith(
+      verificationStatus: next.overallStatus,
+      kigaliGreenBadge: next.kigaliGreenBadge,
+      nidaNumber: next.nidaNumber,
+      iremboCertUrl: next.iremboCertUrl,
+      tradeCertUrl: next.tradeCertUrl,
+      tradeCertKind: next.tradeKind,
+      livenessSelfieRef: next.livenessSelfieRef,
+      smileJobId: next.smileJobId,
+      idVerified: next.nidaKycPassed,
+      certificateVerified: next.tradeStatus == VerificationStatus.verified,
+      phoneVerified:
+          next.overallStatus == VerificationStatus.verified ? true : phoneVerified,
+      idVerificationStatus: next.nidaStatus,
+      livenessVerificationStatus: next.livenessStatus,
+      iremboVerificationStatus: next.iremboStatus,
+      tvetVerificationStatus: next.tradeStatus,
+    );
+  }
 
   Professional copyWith({
     String? id,
@@ -65,8 +131,20 @@ class Professional {
     VerificationStatus? phoneVerificationStatus,
     VerificationStatus? idVerificationStatus,
     VerificationStatus? tvetVerificationStatus,
+    VerificationStatus? iremboVerificationStatus,
+    VerificationStatus? livenessVerificationStatus,
+    bool? kigaliGreenBadge,
+    String? nidaNumber,
+    String? iremboCertUrl,
+    String? tradeCertUrl,
+    TradeCertificateKind? tradeCertKind,
+    String? livenessSelfieRef,
+    String? smileJobId,
     String? userId,
     String? sector,
+    String? district,
+    double? latitude,
+    double? longitude,
   }) {
     return Professional(
       id: id ?? this.id,
@@ -87,8 +165,22 @@ class Professional {
       idVerificationStatus: idVerificationStatus ?? this.idVerificationStatus,
       tvetVerificationStatus:
           tvetVerificationStatus ?? this.tvetVerificationStatus,
+      iremboVerificationStatus:
+          iremboVerificationStatus ?? this.iremboVerificationStatus,
+      livenessVerificationStatus:
+          livenessVerificationStatus ?? this.livenessVerificationStatus,
+      kigaliGreenBadge: kigaliGreenBadge ?? this.kigaliGreenBadge,
+      nidaNumber: nidaNumber ?? this.nidaNumber,
+      iremboCertUrl: iremboCertUrl ?? this.iremboCertUrl,
+      tradeCertUrl: tradeCertUrl ?? this.tradeCertUrl,
+      tradeCertKind: tradeCertKind ?? this.tradeCertKind,
+      livenessSelfieRef: livenessSelfieRef ?? this.livenessSelfieRef,
+      smileJobId: smileJobId ?? this.smileJobId,
       userId: userId ?? this.userId,
       sector: sector ?? this.sector,
+      district: district ?? this.district,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
     );
   }
 }

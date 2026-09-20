@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/user.dart';
 import '../state/marketplace_controller.dart';
 import '../widgets/app_states.dart';
 
@@ -27,6 +28,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  UserRole role = UserRole.customer;
+
   Future<void> _submit() async {
     if (!formKey.currentState!.validate()) return;
     final controller = context.read<MarketplaceController>();
@@ -35,6 +38,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       email: email.text,
       phoneNumber: phone.text,
       password: password.text,
+      role: role,
     );
     if (!mounted) return;
     if (ok) Navigator.of(context).pushReplacementNamed('/home');
@@ -93,6 +97,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     (value == null || value.length < 6)
                         ? 'Use at least 6 characters'
                         : null,
+              ),
+              const SizedBox(height: 12),
+              RadioGroup<UserRole>(
+                groupValue: role,
+                onChanged: (value) {
+                  if (value != null) setState(() => role = value);
+                },
+                child: const Column(
+                  children: [
+                    RadioListTile<UserRole>(
+                      value: UserRole.customer,
+                      title: Text('I need a technician'),
+                    ),
+                    RadioListTile<UserRole>(
+                      value: UserRole.professional,
+                      title: Text('I am a professional'),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 20),
               ElevatedButton(

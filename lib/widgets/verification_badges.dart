@@ -24,13 +24,22 @@ class VerificationBadges extends StatelessWidget {
           status: professional.idVerificationStatus,
         ),
         _Badge(
-          label: 'TVET',
+          label: 'Liveness',
+          status: professional.livenessVerificationStatus,
+        ),
+        _Badge(
+          label: 'Irembo',
+          status: professional.iremboVerificationStatus,
+        ),
+        _Badge(
+          label: 'TVET / RDB',
           status: professional.tvetVerificationStatus,
         ),
         _Badge(
           label: 'Overall',
           status: professional.verificationStatus,
         ),
+        if (professional.kigaliGreenBadge) const KigaliGreenBadge(),
       ],
     );
   }
@@ -66,6 +75,35 @@ class _Badge extends StatelessWidget {
           const SizedBox(width: 6),
           Text('$label: '),
           StatusPill.verification(status),
+        ],
+      ),
+    );
+  }
+}
+
+class KigaliGreenBadge extends StatelessWidget {
+  const KigaliGreenBadge({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.accentGreen.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.verified_rounded, size: 16, color: AppTheme.accentGreen),
+          SizedBox(width: 6),
+          Text(
+            'Kigali Green Badge',
+            style: TextStyle(
+              color: AppTheme.accentGreen,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );

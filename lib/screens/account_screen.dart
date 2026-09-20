@@ -52,6 +52,17 @@ class AccountScreen extends StatelessWidget {
             subtitle: const Text('${AppConfig.market} · ${AppConfig.language}'),
             onTap: () => Navigator.of(context).pushNamed('/settings'),
           ),
+          if (controller.isProfessional)
+            ListTile(
+              leading: const Icon(Icons.verified_outlined),
+              title: const Text('Provider verification'),
+              subtitle: Text(
+                controller.myProfessional?.kigaliGreenBadge == true
+                    ? 'Kigali Green Badge is active'
+                    : 'Complete NIDA, Irembo, and trade documents',
+              ),
+              onTap: () => Navigator.of(context).pushNamed('/onboarding'),
+            ),
           if (controller.isAdmin)
             ListTile(
               leading: const Icon(Icons.verified_user_outlined),

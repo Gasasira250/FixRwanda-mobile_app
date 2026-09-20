@@ -13,21 +13,29 @@ class StatusPill extends StatelessWidget {
   factory StatusPill.booking(BookingStatus status) {
     final color = switch (status) {
       BookingStatus.pending => Colors.orange,
-      BookingStatus.confirmed => AppTheme.primaryColor,
+      BookingStatus.broadcasting => Colors.orange,
+      BookingStatus.accepted => AppTheme.primaryColor,
       BookingStatus.enRoute => Colors.deepPurple,
       BookingStatus.arrived => Colors.teal,
       BookingStatus.inProgress => AppTheme.accentGreen,
+      BookingStatus.awaitingOtp => const Color(0xFFB45309),
       BookingStatus.completed => AppTheme.accentGreen,
+      BookingStatus.disputed => Colors.deepOrange,
       BookingStatus.cancelled => Colors.redAccent,
+      BookingStatus.expired => Colors.blueGrey,
     };
     final label = switch (status) {
-      BookingStatus.pending => 'Pending',
-      BookingStatus.confirmed => 'Confirmed',
+      BookingStatus.pending => 'Awaiting escrow',
+      BookingStatus.broadcasting => 'Finding technician',
+      BookingStatus.accepted => 'Accepted',
       BookingStatus.enRoute => 'En route',
       BookingStatus.arrived => 'Arrived',
       BookingStatus.inProgress => 'In progress',
+      BookingStatus.awaitingOtp => 'Confirm with OTP',
       BookingStatus.completed => 'Completed',
+      BookingStatus.disputed => 'Disputed',
       BookingStatus.cancelled => 'Cancelled',
+      BookingStatus.expired => 'Expired',
     };
     return StatusPill(label: label, color: color);
   }

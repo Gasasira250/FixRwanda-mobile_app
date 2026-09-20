@@ -70,3 +70,7 @@ List<Service> servicesFor(String professionalId, String category, int basePrice)
       ),
   ];
 }
+
+List<Service> categoryServices(String category, {int basePrice = 20000}) {
+  return servicesFor('broadcast', category, basePrice);
+}

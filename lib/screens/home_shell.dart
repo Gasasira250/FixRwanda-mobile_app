@@ -8,8 +8,10 @@ import '../theme/app_theme.dart';
 import '../utils/constants.dart';
 import '../utils/money.dart';
 import '../widgets/app_states.dart';
+import '../widgets/verification_badges.dart';
 import 'account_screen.dart';
 import 'bookings_screen.dart';
+import 'job_request_screen.dart';
 import 'professionals_screen.dart';
 
 class HomeShell extends StatefulWidget {
@@ -29,12 +31,13 @@ class _HomeShellState extends State<HomeShell> {
       const BookingsScreen(),
       const AccountScreen(),
     ];
+    final controller = context.watch<MarketplaceController>();
     return Scaffold(
       body: pages[index],
       bottomNavigationBar: NavigationBar(
         selectedIndex: index,
         onDestinationSelected: (value) => setState(() => index = value),
-        destinations: const [
+        destinations: [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home_rounded),
@@ -43,7 +46,7 @@ class _HomeShellState extends State<HomeShell> {
           NavigationDestination(
             icon: Icon(Icons.calendar_month_outlined),
             selectedIcon: Icon(Icons.calendar_month_rounded),
-            label: 'Bookings',
+            label: controller.isProfessional ? 'Jobs' : 'Bookings',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),
@@ -90,6 +93,15 @@ class _HomeScreenState extends State<HomeScreen> {
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: 16),
+          if (controller.isProfessional &&
+              controller.myProfessional?.isBookable != true)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: ErrorBanner(
+                message:
+                    'Complete NIDA KYC, Irembo good conduct, and a TVET/IPRC or RDB document to receive job offers.',
+              ),
+            ),
           TextField(
             controller: search,
             textInputAction: TextInputAction.search,
@@ -142,9 +154,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => ProfessionalsScreen(
-                          initial: ProfessionalFilter(category: category),
-                        ),
+                        builder: (_) => JobRequestScreen(category: category),
                       ),
                     );
                   },
@@ -257,12 +267,17 @@ class ProfessionalCard extends StatelessWidget {
                       '${professional.category} · ${professional.sector ?? professional.location}',
                     ),
                     const SizedBox(height: 4),
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         const Icon(Icons.star, color: Color(0xFFF59E0B), size: 16),
                         Text(' ${professional.rating}'),
-                        const SizedBox(width: 8),
-                        StatusPill.verification(professional.verificationStatus),
+                        if (professional.kigaliGreenBadge)
+                          const KigaliGreenBadge()
+                        else
+                          StatusPill.verification(professional.verificationStatus),
                       ],
                     ),
                   ],

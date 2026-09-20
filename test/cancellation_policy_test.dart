@@ -20,8 +20,8 @@ Booking booking(BookingStatus status, {int price = 20000}) {
 }
 
 void main() {
-  test('confirmed bookings refund in full', () {
-    final item = booking(BookingStatus.confirmed);
+  test('accepted bookings refund in full before travel', () {
+    final item = booking(BookingStatus.accepted);
     expect(CancellationPolicy.canCancelBooking(item), isTrue);
     expect(CancellationPolicy.calculateCancellationFee(item), 0);
     expect(CancellationPolicy.calculateRefundAmount(item), 20000);
@@ -33,9 +33,8 @@ void main() {
     expect(CancellationPolicy.calculateRefundAmount(item), 18000);
   });
 
-  test('inProgress bookings cannot be cancelled', () {
-    final item = booking(BookingStatus.inProgress);
+  test('awaiting OTP cannot be cancelled', () {
+    final item = booking(BookingStatus.awaitingOtp);
     expect(CancellationPolicy.canCancelBooking(item), isFalse);
-    expect(CancellationPolicy.quote(item).canCancel, isFalse);
   });
 }

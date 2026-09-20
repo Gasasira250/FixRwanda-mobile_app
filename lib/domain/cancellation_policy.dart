@@ -22,25 +22,31 @@ class CancellationPolicy {
 
   static bool canCancelBooking(Booking booking) {
     switch (booking.status) {
-      case BookingStatus.confirmed:
+      case BookingStatus.pending:
+      case BookingStatus.broadcasting:
+      case BookingStatus.accepted:
       case BookingStatus.enRoute:
       case BookingStatus.arrived:
-      case BookingStatus.pending:
         return true;
       case BookingStatus.inProgress:
+      case BookingStatus.awaitingOtp:
       case BookingStatus.completed:
+      case BookingStatus.disputed:
       case BookingStatus.cancelled:
+      case BookingStatus.expired:
         return false;
     }
   }
 
   static int calculateCancellationFee(Booking booking) {
     if (!canCancelBooking(booking)) return 0;
-    if (booking.status == BookingStatus.confirmed ||
-        booking.status == BookingStatus.pending) {
-      return 0;
+    switch (booking.status) {
+      case BookingStatus.enRoute:
+      case BookingStatus.arrived:
+        return transportFeeRwf;
+      default:
+        return 0;
     }
-    return transportFeeRwf;
   }
 
   static int calculateRefundAmount(Booking booking) {
@@ -51,55 +57,74 @@ class CancellationPolicy {
   }
 
   static CancellationQuote quote(Booking booking) {
-    if (booking.status == BookingStatus.cancelled) {
-      return CancellationQuote(
-        canCancel: false,
-        cancellationFeeRwf: booking.cancellationFeeRwf ?? 0,
-        refundAmountRwf: booking.refundAmountRwf ?? 0,
-        title: 'Already cancelled',
-        message: 'This booking is already cancelled.',
-      );
+    switch (booking.status) {
+      case BookingStatus.cancelled:
+        return CancellationQuote(
+          canCancel: false,
+          cancellationFeeRwf: booking.cancellationFeeRwf ?? 0,
+          refundAmountRwf: booking.refundAmountRwf ?? 0,
+          title: 'Already cancelled',
+          message: 'This booking is already cancelled. Escrow was refunded.',
+        );
+      case BookingStatus.expired:
+        return CancellationQuote(
+          canCancel: false,
+          cancellationFeeRwf: 0,
+          refundAmountRwf: booking.refundAmountRwf ?? booking.servicePrice,
+          title: 'Request expired',
+          message:
+              'No verified professional accepted within 15 minutes. Escrow was refunded.',
+        );
+      case BookingStatus.completed:
+        return const CancellationQuote(
+          canCancel: false,
+          cancellationFeeRwf: 0,
+          refundAmountRwf: 0,
+          title: 'Cancellation is not available',
+          message: 'Completed bookings cannot be cancelled.',
+        );
+      case BookingStatus.inProgress:
+      case BookingStatus.awaitingOtp:
+        return const CancellationQuote(
+          canCancel: false,
+          cancellationFeeRwf: 0,
+          refundAmountRwf: 0,
+          title: 'Work already started',
+          message: 'Jobs in progress cannot be cancelled. Confirm with your OTP when the work is done.',
+        );
+      case BookingStatus.disputed:
+        return const CancellationQuote(
+          canCancel: false,
+          cancellationFeeRwf: 0,
+          refundAmountRwf: 0,
+          title: 'Job is under review',
+          message: 'FixRwanda admin is reviewing this dispute. Escrow stays held until a refund or payout is issued.',
+        );
+      case BookingStatus.pending:
+      case BookingStatus.broadcasting:
+      case BookingStatus.accepted:
+        return CancellationQuote(
+          canCancel: true,
+          cancellationFeeRwf: 0,
+          refundAmountRwf: booking.servicePrice,
+          title: 'Cancel request',
+          message:
+              'The professional has not started travelling. Full escrow refund: ${booking.servicePrice} RWF.',
+        );
+      case BookingStatus.enRoute:
+      case BookingStatus.arrived:
+        final refund = calculateRefundAmount(booking);
+        final onTheWay = booking.status == BookingStatus.enRoute;
+        return CancellationQuote(
+          canCancel: true,
+          cancellationFeeRwf: transportFeeRwf,
+          refundAmountRwf: refund,
+          title: onTheWay
+              ? 'Professional is already on the way'
+              : 'Professional is already on site',
+          message:
+              'A $transportFeeRwf RWF transport fee is withheld from escrow. Refund: $refund RWF.',
+        );
     }
-    if (booking.status == BookingStatus.completed) {
-      return const CancellationQuote(
-        canCancel: false,
-        cancellationFeeRwf: 0,
-        refundAmountRwf: 0,
-        title: 'Cancellation is not available',
-        message: 'Completed bookings cannot be cancelled.',
-      );
-    }
-    if (booking.status == BookingStatus.inProgress) {
-      return const CancellationQuote(
-        canCancel: false,
-        cancellationFeeRwf: 0,
-        refundAmountRwf: 0,
-        title: 'Work already started',
-        message: 'Jobs in progress cannot be cancelled.',
-      );
-    }
-    if (booking.status == BookingStatus.confirmed ||
-        booking.status == BookingStatus.pending) {
-      return CancellationQuote(
-        canCancel: true,
-        cancellationFeeRwf: 0,
-        refundAmountRwf: booking.servicePrice,
-        title: 'Cancel booking',
-        message:
-            'The professional has not started travelling. Full refund: ${booking.servicePrice} RWF.',
-      );
-    }
-    final refund = calculateRefundAmount(booking);
-    final onTheWay = booking.status == BookingStatus.enRoute;
-    return CancellationQuote(
-      canCancel: true,
-      cancellationFeeRwf: transportFeeRwf,
-      refundAmountRwf: refund,
-      title: onTheWay
-          ? 'Professional is already on the way'
-          : 'Professional is already on site',
-      message:
-          'A $transportFeeRwf RWF transport fee is withheld. Refund: $refund RWF.',
-    );
   }
 }

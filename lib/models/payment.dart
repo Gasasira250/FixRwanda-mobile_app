@@ -10,6 +10,22 @@ enum PaymentStatus {
   failed,
 }
 
+enum PaymentState {
+  initiated,
+  heldInEscrow,
+  disbursedToProvider,
+  refunded,
+}
+
+extension PaymentStateApi on PaymentState {
+  String get apiName => switch (this) {
+        PaymentState.initiated => 'INITIATED',
+        PaymentState.heldInEscrow => 'HELD_IN_ESCROW',
+        PaymentState.disbursedToProvider => 'DISBURSED_TO_PROVIDER',
+        PaymentState.refunded => 'REFUNDED',
+      };
+}
+
 class Payment {
   final String id;
   final String bookingId;

@@ -1,23 +1,36 @@
+import 'dart:math';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/app_config.dart';
 import '../core/exceptions.dart';
 import '../domain/booking_lifecycle.dart';
+import '../domain/broadcast_router.dart';
 import '../domain/cancellation_policy.dart';
 import '../domain/commission_service.dart';
+import '../domain/nida.dart';
+import '../domain/verification_pipeline.dart';
 import '../models/booking.dart';
 import '../models/commission.dart';
+import '../models/escrow.dart';
+import '../models/job_message.dart';
 import '../models/payment.dart';
 import '../models/professional.dart';
+import '../models/provider_verification.dart';
 import '../models/review.dart';
 import '../models/service.dart';
 import '../models/user.dart';
-import '../payments/mock_providers.dart';
-import '../payments/payment_provider.dart';
+import '../payments/escrow_service.dart';
 import '../repositories/admin_repository.dart';
 import '../repositories/auth_repository.dart';
 import '../repositories/booking_repository.dart';
 import '../repositories/professional_repository.dart';
+import '../utils/constants.dart';
 import '../repositories/review_repository.dart';
+import '../repositories/verification_repository.dart';
+import '../verification/irembo_audit.dart';
+import '../verification/kyc_provider.dart';
+import '../verification/trade_cert_audit.dart';
 import 'catalog_services.dart';
 
 class StoredAccount {
@@ -32,16 +45,26 @@ class LocalMarketplaceStore
         ProfessionalRepository,
         BookingRepository,
         ReviewRepository,
-        AdminRepository {
+        AdminRepository,
+        VerificationRepository {
   LocalMarketplaceStore({
-    PaymentGateway? gateway,
     CommissionService? commissionService,
+    EscrowService? escrowService,
+    IdentityKycClient? kycClient,
+    IremboGovAuditClient? iremboAudit,
+    TradeCertAuditClient? tradeAudit,
     this._preferences,
-  })  : _gateway = gateway ?? buildMockPaymentGateway(),
-        _commissionService = commissionService ?? const CommissionService();
+  })  : _commissionService = commissionService ?? const CommissionService(),
+        _escrow = escrowService ?? buildMockEscrowService(),
+        _kyc = kycClient ?? const SmileIdKycClient(),
+        _iremboAudit = iremboAudit ?? const MockIremboGovAuditClient(),
+        _tradeAudit = tradeAudit ?? const MockTradeCertAuditClient();
 
-  final PaymentGateway _gateway;
   final CommissionService _commissionService;
+  final EscrowService _escrow;
+  final IdentityKycClient _kyc;
+  final IremboGovAuditClient _iremboAudit;
+  final TradeCertAuditClient _tradeAudit;
   SharedPreferences? _preferences;
 
   final Map<String, StoredAccount> _accounts = {};
@@ -51,7 +74,10 @@ class LocalMarketplaceStore
   final List<Payment> _payments = [];
   final List<Review> _reviews = [];
   final List<CommissionBreakdown> _commissions = [];
+  final List<EscrowHold> _escrows = [];
+  final List<JobMessage> _messages = [];
   String? _sessionUserId;
+  final _random = Random();
 
   Future<void> initialize() async {
     _preferences ??= await SharedPreferences.getInstance();
@@ -67,6 +93,10 @@ class LocalMarketplaceStore
         .toList();
   }
 
+  List<Service> servicesForCategory(String category) {
+    return categoryServices(category);
+  }
+
   Service? serviceById(String id) {
     for (final service in _services) {
       if (service.id == id) return service;
@@ -75,6 +105,21 @@ class LocalMarketplaceStore
   }
 
   List<CommissionBreakdown> get commissions => List.unmodifiable(_commissions);
+
+  EscrowHold? escrowFor(String bookingId) {
+    EscrowHold? latest;
+    for (final hold in _escrows) {
+      if (hold.bookingId == bookingId) latest = hold;
+    }
+    return latest;
+  }
+
+  Professional? professionalForUser(String userId) {
+    for (final professional in _professionals) {
+      if (professional.userId == userId) return professional;
+    }
+    return null;
+  }
 
   @override
   Future<User?> restoreSession() async {
@@ -143,6 +188,28 @@ class LocalMarketplaceStore
       createdAt: DateTime.now(),
     );
     _accounts[user.id] = StoredAccount(user: user, password: password);
+    if (role == UserRole.professional) {
+      _professionals.add(
+        Professional(
+          id: 'pro-${user.id}',
+          name: user.fullName,
+          imageUrl: '',
+          category: AppConstants.serviceCategories.first,
+          description: '${user.fullName} is awaiting verification.',
+          location: 'Kigali',
+          startingPrice: 15000,
+          rating: 0,
+          completedJobs: 0,
+          phoneVerified: false,
+          idVerified: false,
+          certificateVerified: false,
+          verificationStatus: VerificationStatus.pending,
+          userId: user.id,
+          sector: kigaliDistricts.first,
+          district: kigaliDistricts.first,
+        ),
+      );
+    }
     _sessionUserId = user.id;
     await _preferences?.setString('session_user_id', user.id);
     return user;
@@ -258,33 +325,50 @@ class LocalMarketplaceStore
   Future<Booking> createBooking(CreateBookingInput input) async {
     await initialize();
     final customer = currentUserOrThrow();
-    final professional = await getProfessionalById(input.professionalId);
-    if (professional == null) {
-      throw MarketplaceException('Professional was not found.');
-    }
-    if (!professional.isBookable) {
-      throw MarketplaceException(
-        'This professional is still under verification and cannot be booked yet.',
-      );
+    if (customer.role != UserRole.customer && customer.role != UserRole.admin) {
+      throw MarketplaceException('Only customers can request a job.');
     }
     final booking = Booking(
       id: 'b-${DateTime.now().millisecondsSinceEpoch}',
       customerId: customer.id,
-      professionalId: professional.id,
       serviceId: input.serviceId,
       serviceName: input.serviceName,
-      professionalName: professional.name,
+      category: input.category,
       scheduledDate: input.scheduledDate,
       scheduledTime: input.scheduledTime,
       customerAddress: input.customerAddress,
       servicePrice: input.servicePrice,
+      platformFeeRwf: (input.servicePrice * AppConfig.commissionRate).round(),
+      paymentState: PaymentState.initiated,
       status: BookingStatus.pending,
       createdAt: DateTime.now(),
-      district: input.district ?? 'Kigali',
+      district: input.district ?? 'Gasabo',
       sector: input.sector,
     );
     _bookings.add(booking);
     return booking;
+  }
+
+  @override
+  Future<List<Booking>> openBroadcastsForProfessional(String professionalId) async {
+    await expireStaleBroadcasts();
+    final professional = await getProfessionalById(professionalId);
+    if (professional == null || !professional.isBookable) return const [];
+    return _bookings.where((booking) {
+      return booking.status == BookingStatus.broadcasting &&
+          booking.currentOfferIds.contains(professionalId) &&
+          booking.district == professional.district &&
+          booking.category == professional.category;
+    }).toList();
+  }
+
+  @override
+  Future<List<Booking>> assignedJobsForProfessional(String professionalId) async {
+    await expireStaleBroadcasts();
+    return _bookings
+        .where((booking) => booking.professionalId == professionalId)
+        .toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
   @override
@@ -294,12 +378,15 @@ class LocalMarketplaceStore
     required String phoneNumber,
   }) async {
     await initialize();
+    if (AppConfig.allowCashPayouts) {
+      throw MarketplaceException('Cash payouts are disabled.');
+    }
     final booking = await getBookingById(bookingId);
     if (booking == null) {
       throw MarketplaceException('Booking was not found.');
     }
     if (booking.status != BookingStatus.pending) {
-      throw MarketplaceException('This booking is no longer awaiting payment.');
+      throw MarketplaceException('This request is no longer awaiting escrow.');
     }
 
     final pendingPayment = Payment(
@@ -312,35 +399,54 @@ class LocalMarketplaceStore
     );
     _payments.add(pendingPayment);
 
-    final result = await _gateway.charge(
-      PaymentRequest(
-        amountRwf: booking.servicePrice,
-        method: method,
-        phoneNumber: phoneNumber,
-        bookingId: booking.id,
-      ),
-    );
-
-    final settled = pendingPayment.copyWith(
-      status: result.status,
-      transactionReference: result.reference,
-    );
-    _replacePayment(settled);
-
-    if (!result.isSuccess) {
+    try {
+      final hold = await _escrow.hold(
+        EscrowRequest(
+          bookingId: booking.id,
+          amountRwf: booking.servicePrice,
+          method: method,
+          phoneNumber: phoneNumber,
+        ),
+      );
+      _escrows.add(hold);
+      final settled = pendingPayment.copyWith(
+        status: PaymentStatus.success,
+        transactionReference: hold.providerReference,
+      );
+      _replacePayment(settled);
+      final origin = BroadcastRouter.pointForDistrict(booking.district ?? 'Gasabo');
+      final ranked = BroadcastRouter.rankVerified(
+        professionals: _professionals,
+        district: booking.district ?? 'Gasabo',
+        category: booking.category,
+        origin: origin,
+      );
+      final offerIds = BroadcastRouter.nextOfferIds(
+        ranked: ranked,
+        alreadyOffered: const [],
+        take: BroadcastRouter.initialOfferCount,
+      );
+      final broadcasting = booking.copyWith(
+        status: BookingLifecycle.transition(
+          booking.status,
+          BookingStatus.broadcasting,
+        ),
+        paymentId: settled.id,
+        escrowId: hold.id,
+        broadcastExpiresAt: DateTime.now().add(AppConfig.broadcastTimeout),
+        broadcastRound: 1,
+        currentOfferIds: offerIds,
+        offeredProviderIds: offerIds,
+        paymentState: PaymentState.heldInEscrow,
+        platformFeeRwf: (booking.servicePrice * AppConfig.commissionRate).round(),
+      );
+      _replaceBooking(broadcasting);
       return settled;
+    } catch (_) {
+      final failed = pendingPayment.copyWith(status: PaymentStatus.failed);
+      _replacePayment(failed);
+      return failed;
     }
-
-    final confirmed = booking.copyWith(
-      status: BookingLifecycle.transition(
-        booking.status,
-        BookingStatus.confirmed,
-      ),
-      paymentId: settled.id,
-    );
-    _replaceBooking(confirmed);
-    _commissions.add(_commissionService.calculate(booking.servicePrice));
-    return settled;
   }
 
   @override
@@ -364,35 +470,318 @@ class LocalMarketplaceStore
       throw MarketplaceException(quote.message);
     }
     BookingLifecycle.transition(booking.status, BookingStatus.cancelled);
+    await _refundEscrow(booking, feeRwf: quote.cancellationFeeRwf);
     final cancelled = booking.copyWith(
       status: BookingStatus.cancelled,
       cancellationFeeRwf: quote.cancellationFeeRwf,
       refundAmountRwf: quote.refundAmountRwf,
       cancelledAt: DateTime.now(),
+      paymentState: PaymentState.refunded,
     );
     _replaceBooking(cancelled);
     return cancelled;
   }
 
   @override
-  Future<Booking> updateStatus(String bookingId, BookingStatus status) async {
-    await initialize();
-    final booking = await getBookingById(bookingId);
-    if (booking == null) {
-      throw MarketplaceException('Booking was not found.');
+  Future<Booking> updateStatus(String bookingId, BookingStatus status) {
+    return switch (status) {
+      BookingStatus.enRoute => startTravel(bookingId),
+      BookingStatus.arrived => markArrived(bookingId),
+      BookingStatus.inProgress =>
+        startJob(bookingId, photoRef: 'evidence://auto'),
+      _ => Future.error(
+          MarketplaceException('Use the job actions instead of a free status jump.'),
+        ),
+    };
+  }
+
+  @override
+  Future<Booking> acceptJob(String bookingId) async {
+    await expireStaleBroadcasts();
+    final professional = _requireVerifiedProfessional();
+    final booking = await _requireBooking(bookingId);
+    if (booking.status != BookingStatus.broadcasting) {
+      throw MarketplaceException('This job is no longer open.');
     }
-    final next = BookingLifecycle.transition(booking.status, status);
-    var updated = booking.copyWith(status: next);
-    if (next == BookingStatus.completed) {
-      final professional = await getProfessionalById(booking.professionalId);
-      if (professional != null) {
-        _replaceProfessional(
-          professional.copyWith(completedJobs: professional.completedJobs + 1),
-        );
-      }
+    if (!booking.currentOfferIds.contains(professional.id)) {
+      throw MarketplaceException('This job was offered to closer technicians first.');
     }
+    if (booking.district != professional.district) {
+      throw MarketplaceException('This job is outside your district.');
+    }
+    BookingLifecycle.transition(booking.status, BookingStatus.accepted);
+    final accepted = booking.copyWith(
+      status: BookingStatus.accepted,
+      professionalId: professional.id,
+      professionalName: professional.name,
+    );
+    _replaceBooking(accepted);
+    return accepted;
+  }
+
+  @override
+  Future<Booking> startTravel(String bookingId) async {
+    final booking = await _requireAssignedJob(bookingId);
+    BookingLifecycle.transition(booking.status, BookingStatus.enRoute);
+    final updated = booking.copyWith(
+      status: BookingStatus.enRoute,
+      providerLatitude: -1.9441,
+      providerLongitude: 30.0619,
+      lastLocationAt: DateTime.now(),
+    );
     _replaceBooking(updated);
     return updated;
+  }
+
+  @override
+  Future<Booking> markArrived(String bookingId) async {
+    final booking = await _requireAssignedJob(bookingId);
+    BookingLifecycle.transition(booking.status, BookingStatus.arrived);
+    final updated = booking.copyWith(status: BookingStatus.arrived);
+    _replaceBooking(updated);
+    return updated;
+  }
+
+  @override
+  Future<Booking> startJob(
+    String bookingId, {
+    required String photoRef,
+  }) async {
+    final booking = await _requireAssignedJob(bookingId);
+    if (photoRef.trim().isEmpty) {
+      throw MarketplaceException('Upload an arrival photo before starting the job.');
+    }
+    BookingLifecycle.transition(booking.status, BookingStatus.inProgress);
+    final otp = (1000 + _random.nextInt(9000)).toString();
+    final updated = booking.copyWith(
+      status: BookingStatus.inProgress,
+      startJobPhotoRef: photoRef.trim(),
+      startedAt: DateTime.now(),
+      completionOtp: otp,
+    );
+    _replaceBooking(updated);
+    return updated;
+  }
+
+  @override
+  Future<Booking> markWorkFinished(String bookingId, {String otp = ''}) async {
+    final booking = await _requireAssignedJob(bookingId);
+    if (booking.startJobPhotoRef == null) {
+      throw MarketplaceException('Start the job with a photo first.');
+    }
+    if (booking.afterPhotoUrl == null) {
+      throw MarketplaceException('Upload an after photo before payout.');
+    }
+    if (booking.completionOtp == null) {
+      throw MarketplaceException('The client confirmation code is not ready.');
+    }
+    if (otp.trim() != booking.completionOtp) {
+      throw MarketplaceException(
+        'Enter the 4-digit code from the client screen to release payout.',
+      );
+    }
+    BookingLifecycle.transition(booking.status, BookingStatus.completed);
+    await _releaseEscrow(booking);
+    final completed = booking.copyWith(
+      status: BookingStatus.completed,
+      paymentState: PaymentState.disbursedToProvider,
+    );
+    _replaceBooking(completed);
+    final professional = await getProfessionalById(booking.professionalId);
+    if (professional != null) {
+      _replaceProfessional(
+        professional.copyWith(completedJobs: professional.completedJobs + 1),
+      );
+    }
+    return completed;
+  }
+
+  @override
+  Future<Booking> confirmCompletionWithOtp(String bookingId, String otp) {
+    return markWorkFinished(bookingId, otp: otp);
+  }
+
+  @override
+  Future<Booking> uploadAfterPhoto(String bookingId, {required String photoRef}) async {
+    final booking = await _requireAssignedJob(bookingId);
+    if (booking.status != BookingStatus.inProgress) {
+      throw MarketplaceException('After photos are taken while the job is in progress.');
+    }
+    if (photoRef.trim().isEmpty) {
+      throw MarketplaceException('Upload an after photo.');
+    }
+    final updated = booking.copyWith(afterPhotoUrl: photoRef.trim());
+    _replaceBooking(updated);
+    return updated;
+  }
+
+  @override
+  Future<Booking> openDispute(String bookingId, {required String reason}) async {
+    await initialize();
+    final user = currentUserOrThrow();
+    final booking = await _requireBooking(bookingId);
+    if (user.id != booking.customerId && user.role != UserRole.admin) {
+      throw MarketplaceException('Only the client can open a dispute.');
+    }
+    if (booking.paymentState == PaymentState.disbursedToProvider) {
+      throw MarketplaceException('Payout already left escrow.');
+    }
+    if (reason.trim().length < 8) {
+      throw MarketplaceException('Explain the dispute in at least 8 characters.');
+    }
+    BookingLifecycle.transition(booking.status, BookingStatus.disputed);
+    final updated = booking.copyWith(
+      status: BookingStatus.disputed,
+      disputeReason: reason.trim(),
+    );
+    _replaceBooking(updated);
+    return updated;
+  }
+
+  @override
+  Future<Booking> adminRefund(String bookingId) async {
+    _requireAdmin();
+    final booking = await _requireBooking(bookingId);
+    BookingLifecycle.transition(booking.status, BookingStatus.cancelled);
+    await _refundEscrow(booking);
+    final updated = booking.copyWith(
+      status: BookingStatus.cancelled,
+      paymentState: PaymentState.refunded,
+      refundAmountRwf: booking.servicePrice,
+      cancelledAt: DateTime.now(),
+    );
+    _replaceBooking(updated);
+    return updated;
+  }
+
+  @override
+  Future<Booking> adminPayout(String bookingId) async {
+    _requireAdmin();
+    final booking = await _requireBooking(bookingId);
+    BookingLifecycle.transition(booking.status, BookingStatus.completed);
+    await _releaseEscrow(booking);
+    final updated = booking.copyWith(
+      status: BookingStatus.completed,
+      paymentState: PaymentState.disbursedToProvider,
+    );
+    _replaceBooking(updated);
+    return updated;
+  }
+
+  @override
+  Future<List<Booking>> disputedBookings() async {
+    await initialize();
+    return _bookings
+        .where((booking) => booking.status == BookingStatus.disputed)
+        .toList();
+  }
+
+  @override
+  Future<JobMessage> sendJobMessage({
+    required String bookingId,
+    required String body,
+  }) async {
+    await initialize();
+    final user = currentUserOrThrow();
+    final booking = await _requireBooking(bookingId);
+    if (body.trim().isEmpty) {
+      throw MarketplaceException('Write a message first.');
+    }
+    if (user.id != booking.customerId &&
+        user.role != UserRole.admin &&
+        professionalForUser(user.id)?.id != booking.professionalId) {
+      throw MarketplaceException('You cannot message this job.');
+    }
+    final message = JobMessage(
+      id: 'm-${DateTime.now().millisecondsSinceEpoch}',
+      bookingId: booking.id,
+      senderId: user.id,
+      senderName: user.fullName,
+      body: body.trim(),
+      createdAt: DateTime.now(),
+    );
+    _messages.add(message);
+    return message;
+  }
+
+  @override
+  List<JobMessage> messagesFor(String bookingId) {
+    return _messages.where((item) => item.bookingId == bookingId).toList();
+  }
+
+  void _requireAdmin() {
+    final user = currentUserOrThrow();
+    if (user.role != UserRole.admin) {
+      throw MarketplaceException('Admin access is required.');
+    }
+  }
+
+  @override
+  Future<Booking> pushLocation({
+    required String bookingId,
+    required double latitude,
+    required double longitude,
+  }) async {
+    final booking = await _requireAssignedJob(bookingId);
+    if (booking.status != BookingStatus.enRoute &&
+        booking.status != BookingStatus.arrived &&
+        booking.status != BookingStatus.inProgress) {
+      throw MarketplaceException('Location is only shared after the job is accepted.');
+    }
+    final updated = booking.copyWith(
+      providerLatitude: latitude,
+      providerLongitude: longitude,
+      lastLocationAt: DateTime.now(),
+    );
+    _replaceBooking(updated);
+    return updated;
+  }
+
+  @override
+  Future<int> expireStaleBroadcasts({DateTime? now}) async {
+    await initialize();
+    final clock = now ?? DateTime.now();
+    var expired = 0;
+    for (final booking in List<Booking>.from(_bookings)) {
+      if (booking.status != BookingStatus.broadcasting) continue;
+      final deadline = booking.broadcastExpiresAt;
+      if (deadline == null || !clock.isAfter(deadline)) continue;
+      final origin = BroadcastRouter.pointForDistrict(booking.district ?? 'Gasabo');
+      final ranked = BroadcastRouter.rankVerified(
+        professionals: _professionals,
+        district: booking.district ?? 'Gasabo',
+        category: booking.category,
+        origin: origin,
+      );
+      final nextIds = BroadcastRouter.nextOfferIds(
+        ranked: ranked,
+        alreadyOffered: booking.offeredProviderIds,
+        take: BroadcastRouter.rerouteOfferCount,
+      );
+      if (nextIds.isEmpty) {
+        BookingLifecycle.transition(booking.status, BookingStatus.expired);
+        await _refundEscrow(booking);
+        _replaceBooking(
+          booking.copyWith(
+            status: BookingStatus.expired,
+            refundAmountRwf: booking.servicePrice,
+            currentOfferIds: const [],
+            paymentState: PaymentState.refunded,
+          ),
+        );
+        expired += 1;
+        continue;
+      }
+      _replaceBooking(
+        booking.copyWith(
+          currentOfferIds: nextIds,
+          offeredProviderIds: [...booking.offeredProviderIds, ...nextIds],
+          broadcastExpiresAt: clock.add(AppConfig.broadcastTimeout),
+          broadcastRound: booking.broadcastRound + 1,
+        ),
+      );
+    }
+    return expired;
   }
 
   @override
@@ -467,20 +856,188 @@ class LocalMarketplaceStore
     if (professional == null) {
       throw MarketplaceException('Professional was not found.');
     }
+    if (status == VerificationStatus.verified) {
+      final evaluated = VerificationPipeline.evaluate(professional.pipeline);
+      if (!evaluated.kigaliGreenBadge) {
+        throw MarketplaceException(
+          'NIDA KYC, Irembo good conduct, and a TVET/IPRC or RDB document must pass before the Kigali Green Badge can be issued.',
+        );
+      }
+      final updated = professional.applyPipeline(evaluated);
+      _replaceProfessional(updated);
+      return updated;
+    }
     final updated = professional.copyWith(
       verificationStatus: status,
-      phoneVerified: status == VerificationStatus.verified
-          ? true
-          : professional.phoneVerified,
-      idVerified: status == VerificationStatus.verified
-          ? true
-          : professional.idVerified,
-      certificateVerified: status == VerificationStatus.verified
-          ? true
-          : professional.certificateVerified,
+      kigaliGreenBadge: false,
     );
     _replaceProfessional(updated);
     return updated;
+  }
+
+  @override
+  Future<Professional> submitNidaKyc({
+    required String nidaNumber,
+    required String selfieRef,
+  }) async {
+    await initialize();
+    final professional = _requireOwnProfessional();
+    final result = await _kyc.verifyNida(
+      nidaNumber: nidaNumber,
+      selfieRef: selfieRef,
+    );
+    final next = professional.pipeline.copyWith(
+      nidaNumber: NidaNumber.normalize(nidaNumber),
+      livenessSelfieRef: selfieRef.trim(),
+      smileJobId: result.jobId,
+      nidaStatus: result.verified
+          ? VerificationStatus.verified
+          : VerificationStatus.rejected,
+      livenessStatus: result.verified
+          ? VerificationStatus.verified
+          : VerificationStatus.rejected,
+      rejectionReason: result.reason,
+      clearRejection: result.verified,
+    );
+    return _commitPipeline(professional, next);
+  }
+
+  @override
+  Future<Professional> submitIremboCertificate({
+    required String documentRef,
+  }) async {
+    await initialize();
+    final professional = _requireOwnProfessional();
+    final result = await _iremboAudit.auditGoodConduct(
+      providerId: professional.id,
+      documentRef: documentRef,
+    );
+    final next = professional.pipeline.copyWith(
+      iremboCertUrl: result.certificateUrl,
+      iremboStatus: result.verified
+          ? VerificationStatus.verified
+          : VerificationStatus.rejected,
+      rejectionReason: result.reason,
+      clearRejection: result.verified,
+    );
+    return _commitPipeline(professional, next);
+  }
+
+  @override
+  Future<Professional> submitTradeCertificate({
+    required TradeCertificateKind kind,
+    required String documentRef,
+  }) async {
+    await initialize();
+    final professional = _requireOwnProfessional();
+    final result = await _tradeAudit.audit(
+      providerId: professional.id,
+      kind: kind,
+      documentRef: documentRef,
+    );
+    final next = professional.pipeline.copyWith(
+      tradeKind: kind,
+      tradeCertUrl: result.certificateUrl,
+      tradeStatus: result.verified
+          ? VerificationStatus.verified
+          : VerificationStatus.rejected,
+      rejectionReason: result.reason,
+      clearRejection: result.verified,
+    );
+    return _commitPipeline(professional, next);
+  }
+
+  @override
+  Map<String, dynamic> verificationFlag(String professionalId) {
+    Professional? professional;
+    for (final item in _professionals) {
+      if (item.id == professionalId) professional = item;
+    }
+    if (professional == null) {
+      throw MarketplaceException('Professional was not found.');
+    }
+    return professional.verificationFlag;
+  }
+
+  Professional _commitPipeline(
+    Professional professional,
+    ProviderVerification next,
+  ) {
+    final updated = professional.applyPipeline(
+      VerificationPipeline.evaluate(next),
+    );
+    _replaceProfessional(updated);
+    return updated;
+  }
+
+  Professional _requireOwnProfessional() {
+    final user = currentUserOrThrow();
+    final professional = professionalForUser(user.id);
+    if (professional == null) {
+      throw MarketplaceException(
+        'This account is not linked to a professional profile.',
+      );
+    }
+    return professional;
+  }
+
+  Future<Booking> _requireBooking(String bookingId) async {
+    final booking = await getBookingById(bookingId);
+    if (booking == null) {
+      throw MarketplaceException('Booking was not found.');
+    }
+    return booking;
+  }
+
+  Professional _requireVerifiedProfessional() {
+    final user = currentUserOrThrow();
+    final professional = professionalForUser(user.id);
+    if (professional == null) {
+      throw MarketplaceException('This account is not linked to a professional profile.');
+    }
+    if (!professional.isBookable) {
+      throw MarketplaceException(
+        'Only verified professionals with a Kigali Green Badge can accept jobs.',
+      );
+    }
+    return professional;
+  }
+
+  Future<Booking> _requireAssignedJob(String bookingId) async {
+    final professional = _requireVerifiedProfessional();
+    final booking = await _requireBooking(bookingId);
+    if (booking.professionalId != professional.id) {
+      throw MarketplaceException('This job is assigned to another professional.');
+    }
+    return booking;
+  }
+
+  Future<void> _refundEscrow(Booking booking, {int feeRwf = 0}) async {
+    final hold = escrowFor(booking.id);
+    if (hold == null || hold.status != EscrowStatus.held) return;
+    final refunded = await _escrow.refundToClient(hold, feeRwf: feeRwf);
+    _replaceEscrow(refunded);
+  }
+
+  Future<void> _releaseEscrow(Booking booking) async {
+    final hold = escrowFor(booking.id);
+    if (hold == null || hold.status != EscrowStatus.held) {
+      throw MarketplaceException('Escrow is not holding funds for this job.');
+    }
+    final released = await _escrow.releaseToProvider(hold);
+    _replaceEscrow(released);
+    _commissions.add(
+      _commissionService.calculate(booking.servicePrice),
+    );
+  }
+
+  void _replaceEscrow(EscrowHold hold) {
+    final index = _escrows.indexWhere((item) => item.id == hold.id);
+    if (index >= 0) {
+      _escrows[index] = hold;
+    } else {
+      _escrows.add(hold);
+    }
   }
 
   void _replaceBooking(Booking booking) {
@@ -541,6 +1098,17 @@ class LocalMarketplaceStore
     _accounts[customer.id] =
         StoredAccount(user: customer, password: 'rwanda123');
     _accounts[admin.id] = StoredAccount(user: admin, password: 'admin123');
+    final provider = User(
+      id: 'u-provider',
+      fullName: 'Jean Bosco',
+      email: 'jean@fixrwanda.rw',
+      phoneNumber: '+250788555111',
+      role: UserRole.professional,
+      address: 'Kacyiru',
+      createdAt: now,
+    );
+    _accounts[provider.id] =
+        StoredAccount(user: provider, password: 'rwanda123');
 
     final names = [
       ('Jean Bosco', 'Electrical Installation', 25000, 4.8, 64, 'Kacyiru'),
@@ -555,6 +1123,9 @@ class LocalMarketplaceStore
       ('Nadia Umuhoza', 'Beauty Services', 14000, 4.8, 54, 'Kimironko'),
       ('Isaac Mugisha', 'Electrical Installation', 21000, 4.4, 18, 'Nyarugenge'),
       ('Keza Mutoni', 'House Cleaning', 13000, 4.5, 26, 'Nyamirambo'),
+      ('Yves Habimana', 'Electrical Installation', 24000, 4.3, 12, 'Kimironko'),
+      ('Grace Mukamana', 'Electrical Installation', 23000, 4.2, 9, 'Remera'),
+      ('Alain Niyonzima', 'Electrical Installation', 22000, 4.1, 7, 'Kacyiru'),
     ];
 
     for (var i = 0; i < names.length; i++) {
@@ -599,9 +1170,38 @@ class LocalMarketplaceStore
         phoneVerificationStatus: phoneStatus,
         idVerificationStatus: idStatus,
         tvetVerificationStatus: tvetStatus,
+        userId: i == 0 ? 'u-provider' : null,
         sector: item.$6,
+        district: BroadcastRouter.districtForSector(item.$6),
+        latitude: BroadcastRouter.pointForDistrict(
+              BroadcastRouter.districtForSector(item.$6),
+            ).lat +
+            (i * 0.003),
+        longitude: BroadcastRouter.pointForDistrict(
+              BroadcastRouter.districtForSector(item.$6),
+            ).lng +
+            (i * 0.002),
       );
-      _professionals.add(professional);
+      final seeded = overall == VerificationStatus.verified
+          ? professional.applyPipeline(
+              ProviderVerification(
+                providerId: professional.id,
+                overallStatus: VerificationStatus.verified,
+                kigaliGreenBadge: true,
+                nidaStatus: VerificationStatus.verified,
+                livenessStatus: VerificationStatus.verified,
+                iremboStatus: VerificationStatus.verified,
+                tradeStatus: VerificationStatus.verified,
+                nidaNumber: NidaNumber.seed(i),
+                iremboCertUrl: 'https://s3.amazonaws.com/certs/irembo_$i.pdf',
+                tradeCertUrl: 'https://s3.amazonaws.com/certs/tvet_$i.pdf',
+                tradeKind: TradeCertificateKind.tvetIprc,
+                smileJobId: 'smile-job-$i',
+                livenessSelfieRef: 'liveness-$i',
+              ),
+            )
+          : professional;
+      _professionals.add(seeded);
       _services.addAll(
         servicesFor(professional.id, professional.category, professional.startingPrice),
       );
@@ -614,14 +1214,15 @@ class LocalMarketplaceStore
         professionalId: 'pro-1',
         serviceId: 'pro-1-s0',
         serviceName: 'Leak repair',
+        category: 'Plumbing',
         professionalName: 'Aline Uwase',
         scheduledDate: DateTime.now().add(const Duration(days: 1)),
         scheduledTime: '10:00',
         customerAddress: 'KN 5 Ave, Kacyiru',
         servicePrice: 20000,
-        status: BookingStatus.confirmed,
+        status: BookingStatus.accepted,
         createdAt: DateTime.now().subtract(const Duration(hours: 4)),
-        district: 'Kigali',
+        district: 'Gasabo',
         sector: 'Kacyiru',
       ),
       Booking(
@@ -630,6 +1231,7 @@ class LocalMarketplaceStore
         professionalId: 'pro-2',
         serviceId: 'pro-2-s0',
         serviceName: 'Home deep clean',
+        category: 'House Cleaning',
         professionalName: 'Claudine Mukamana',
         scheduledDate: DateTime.now().subtract(const Duration(days: 2)),
         scheduledTime: '09:00',
@@ -637,8 +1239,60 @@ class LocalMarketplaceStore
         servicePrice: 15000,
         status: BookingStatus.completed,
         createdAt: DateTime.now().subtract(const Duration(days: 3)),
-        district: 'Kigali',
+        district: 'Gasabo',
         sector: 'Kimironko',
+        paymentState: PaymentState.disbursedToProvider,
+      ),
+      Booking(
+        id: 'b-seed-3',
+        customerId: customer.id,
+        professionalId: 'pro-1',
+        serviceId: 'pro-1-s0',
+        serviceName: 'Emergency leak',
+        category: 'Plumbing',
+        professionalName: 'Aline Uwase',
+        scheduledDate: DateTime.now().subtract(const Duration(hours: 6)),
+        scheduledTime: '14:00',
+        customerAddress: 'KN 3 Rd, Kacyiru',
+        servicePrice: 20000,
+        platformFeeRwf: 3000,
+        status: BookingStatus.disputed,
+        createdAt: DateTime.now().subtract(const Duration(hours: 8)),
+        district: 'Gasabo',
+        sector: 'Kacyiru',
+        paymentState: PaymentState.heldInEscrow,
+        startJobPhotoRef: 'before-seed-3',
+        afterPhotoUrl: 'after-seed-3',
+        completionOtp: '4821',
+        disputeReason: 'Water still leaks under the sink after the visit.',
+      ),
+    ]);
+    _escrows.add(
+      EscrowHold(
+        id: 'escrow-seed-3',
+        bookingId: 'b-seed-3',
+        amountRwf: 20000,
+        status: EscrowStatus.held,
+        createdAt: DateTime.now().subtract(const Duration(hours: 8)),
+        marketplaceFeeRwf: 3000,
+      ),
+    );
+    _messages.addAll([
+      JobMessage(
+        id: 'm-seed-1',
+        bookingId: 'b-seed-3',
+        senderId: customer.id,
+        senderName: customer.fullName,
+        body: 'The cabinet floor is still wet.',
+        createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+      ),
+      JobMessage(
+        id: 'm-seed-2',
+        bookingId: 'b-seed-3',
+        senderId: 'u-provider',
+        senderName: 'Aline Uwase',
+        body: 'I replaced the trap. Please send a photo of the leak.',
+        createdAt: DateTime.now().subtract(const Duration(hours: 1)),
       ),
     ]);
   }

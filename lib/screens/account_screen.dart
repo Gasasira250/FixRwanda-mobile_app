@@ -114,8 +114,9 @@ class ProfileScreen extends StatelessWidget {
                   width: double.infinity,
                   height: 48,
                   child: OutlinedButton(
-                    onPressed: () {
-                      app.signOut();
+                    onPressed: () async {
+                      await app.signOut();
+                      if (!context.mounted) return;
                       Navigator.of(context).pushNamedAndRemoveUntil(
                         '/login',
                         (_) => false,
@@ -177,12 +178,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
-  void _save() {
+  Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    FixRwandaScope.of(context).updateProfile(
+    await FixRwandaScope.of(context).updateProfile(
       name: _name.text,
       identifier: _identifier.text,
     );
+    if (!mounted) return;
     Navigator.of(context).pop();
   }
 

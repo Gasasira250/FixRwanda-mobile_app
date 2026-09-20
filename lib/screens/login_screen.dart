@@ -24,6 +24,11 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
     _isSignUp = widget.startOnSignUp;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final remembered = FixRwandaScope.of(context).rememberedIdentifier;
+      if (remembered == null || remembered.isEmpty) return;
+      if (_email.text.isEmpty) _email.text = remembered;
+    });
   }
 
   @override

@@ -115,7 +115,7 @@ Unverified professionals (example: Patrick in Musanze) cannot be booked until an
 lib/                  Flutter app (UI, state, REST client)
 backend/             Node.js + Express + PostgreSQL
 admin/                Web dashboard
-docs/                 Postman collection + interview script
+docs/                 Postman collection
 docker-compose.yml    Postgres 16 + API
 ```
 
@@ -147,7 +147,3 @@ git add .
 git commit -m "Add FixRwanda marketplace app, API and admin dashboard."
 gh repo create fix_rwanda --public --source=. --push
 ```
-
-## Interview
-
-See [docs/INTERVIEW.md](docs/INTERVIEW.md) for the 4-minute demo path and architecture talking points.

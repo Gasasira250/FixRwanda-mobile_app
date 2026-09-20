@@ -23,6 +23,8 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _open() async {
     final app = FixRwandaScope.of(context);
+    await app.restoreSession();
+    if (!mounted) return;
     await app.api.discover();
     if (!mounted) return;
     _timer = Timer(const Duration(milliseconds: 400), () {

@@ -27,6 +27,7 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
+.last_build_id
 
 # Symbolication related
 app.*.symbols

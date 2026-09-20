@@ -4,6 +4,7 @@ import '../models/booking.dart';
 import '../models/professional.dart';
 import '../services/api_client.dart';
 import '../services/demo_catalog.dart';
+import '../services/session_store.dart';
 
 class FixRwandaScope extends InheritedNotifier<AppController> {
   const FixRwandaScope({
@@ -20,9 +21,12 @@ class FixRwandaScope extends InheritedNotifier<AppController> {
 }
 
 class AppController extends ChangeNotifier {
-  AppController({ApiClient? api}) : api = api ?? ApiClient();
+  AppController({ApiClient? api, SessionStore? session})
+    : api = api ?? ApiClient(),
+      _session = session ?? SessionStore();
 
   final ApiClient api;
+  final SessionStore _session;
 
   Customer? customer;
   List<Booking> bookings = const [];
@@ -31,11 +35,31 @@ class AppController extends ChangeNotifier {
     'Kigali, Nyarugenge',
     'Kigali, Gasabo',
   ];
+  String? rememberedIdentifier;
   bool busy = false;
   String? error;
 
   bool get isSignedIn => customer != null;
   bool get online => api.online;
+
+  Future<void> restoreSession() async {
+    rememberedIdentifier = await _session.lastIdentifier();
+    final saved = await _session.loadCustomer();
+    if (saved == null) {
+      notifyListeners();
+      return;
+    }
+    customer = saved;
+    api.token = saved.token;
+    preferredPaymentMethod =
+        await _session.loadPaymentMethod() ?? preferredPaymentMethod;
+    savedLocations = await _session.loadLocations() ?? savedLocations;
+    notifyListeners();
+    try {
+      await api.discover();
+      await refreshBookings();
+    } catch (_) {}
+  }
 
   Future<bool> signIn({
     required String identifier,
@@ -43,11 +67,14 @@ class AppController extends ChangeNotifier {
   }) async {
     return _run(() async {
       await api.discover();
-      customer = await api.login(
+      final signedIn = await api.login(
         identifier: identifier,
         password: password,
       );
+      customer = signedIn.copyWith(token: api.token);
+      rememberedIdentifier = customer!.identifier;
       await refreshBookings();
+      await _persist();
     });
   }
 
@@ -58,52 +85,68 @@ class AppController extends ChangeNotifier {
   }) async {
     return _run(() async {
       await api.discover();
-      customer = await api.register(
+      final created = await api.register(
         name: name,
         identifier: identifier,
         password: password,
       );
+      customer = created.copyWith(token: api.token);
+      rememberedIdentifier = customer!.identifier;
+      await refreshBookings();
+      await _persist();
     });
   }
 
-  void signOut() {
+  Future<void> signOut() async {
     customer = null;
     bookings = const [];
     api.token = null;
+    await _session.clearSession();
     notifyListeners();
   }
 
-  void updateProfile({required String name, required String identifier}) {
+  Future<void> updateProfile({
+    required String name,
+    required String identifier,
+  }) async {
     final current = customer;
     if (current == null) return;
     customer = current.copyWith(
       name: name.trim(),
       identifier: identifier.trim(),
     );
+    rememberedIdentifier = customer!.identifier;
+    await _persist();
     notifyListeners();
   }
 
-  void setPreferredPaymentMethod(PaymentMethod method) {
+  Future<void> setPreferredPaymentMethod(PaymentMethod method) async {
     preferredPaymentMethod = method;
+    await _persist();
     notifyListeners();
   }
 
-  void addSavedLocation(String location) {
+  Future<void> addSavedLocation(String location) async {
     final value = location.trim();
     if (value.isEmpty || savedLocations.contains(value)) return;
     savedLocations = [...savedLocations, value];
+    await _persist();
     notifyListeners();
   }
 
-  void removeSavedLocation(String location) {
+  Future<void> removeSavedLocation(String location) async {
     savedLocations = savedLocations.where((item) => item != location).toList();
+    await _persist();
     notifyListeners();
   }
 
   Future<void> refreshBookings() async {
     bookings = await api.fetchBookings();
-    final fromJobs = bookings.map((item) => item.location).where((item) => item.trim().isNotEmpty);
+    final fromJobs = bookings
+        .map((item) => item.location)
+        .where((item) => item.trim().isNotEmpty);
     savedLocations = {...savedLocations, ...fromJobs}.toList();
+    if (isSignedIn) await _persist();
     notifyListeners();
   }
 
@@ -148,6 +191,17 @@ class AppController extends ChangeNotifier {
     final cancelled = await api.cancelBooking(bookingId);
     await refreshBookings();
     return bookingById(cancelled.id) ?? cancelled;
+  }
+
+  Future<void> _persist() async {
+    final current = customer;
+    if (current == null) return;
+    await _session.saveSession(
+      customer: current,
+      token: api.token ?? current.token,
+      paymentMethod: preferredPaymentMethod,
+      savedLocations: savedLocations,
+    );
   }
 
   Future<bool> _run(Future<void> Function() action) async {

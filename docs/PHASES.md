@@ -23,7 +23,6 @@
 | 19 | Web/admin dashboard | http://127.0.0.1:4000/admin/ (`admin@fixrwanda.rw` / `admin123`). |
 | 20 | Hosting | `render.yaml`. Needs GitHub + Render. |
 | 21 | GitHub + README | README is ready. Run `gh auth login` to publish. |
-| 22 | Interview demo | `docs/INTERVIEW.md`. |
 
 ## Demo data already loaded
 

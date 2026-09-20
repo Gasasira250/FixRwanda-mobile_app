@@ -10,8 +10,15 @@ import 'package:fix_rwanda/widgets/phone_frame.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   testWidgets('splash shows FixRwanda branding', (tester) async {
     await tester.pumpWidget(FixRwandaApp(controller: AppController()));
     expect(find.text('FixRwanda'), findsOneWidget);
@@ -98,5 +105,22 @@ void main() {
     expect(find.text('Recenter Map'), findsOneWidget);
     expect(find.text('Use demo account'), findsNothing);
     await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('keeps a signed-in user after restoreSession', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'fixrwanda.session.customer':
+          '{"id":"c1","name":"Ada","identifier":"ada@fixrwanda.rw","role":"customer","token":"tok"}',
+      'fixrwanda.session.token': 'tok',
+      'fixrwanda.session.last_identifier': 'ada@fixrwanda.rw',
+    });
+    final controller = AppController();
+    await controller.restoreSession();
+    expect(controller.isSignedIn, isTrue);
+    expect(controller.customer?.name, 'Ada');
+    expect(controller.rememberedIdentifier, 'ada@fixrwanda.rw');
+    await controller.signOut();
+    expect(controller.isSignedIn, isFalse);
+    expect(controller.rememberedIdentifier, 'ada@fixrwanda.rw');
   });
 }

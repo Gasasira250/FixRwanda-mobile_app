@@ -101,27 +101,32 @@ class BrandMark extends StatelessWidget {
   const BrandMark({super.key, this.size = 56});
 
   final double size;
+  static const assetPath = 'assets/branding/app_icon.png';
 
   @override
   Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(size * 0.22);
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: AppColors.sunYellow,
-        shape: BoxShape.circle,
+        borderRadius: radius,
         boxShadow: [
           BoxShadow(
-            color: AppColors.sunYellow.withValues(alpha: 0.35),
+            color: AppColors.darkSlate.withValues(alpha: 0.22),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
         ],
       ),
-      child: Icon(
-        Icons.handyman_rounded,
-        size: size * 0.5,
-        color: AppColors.skyDark,
+      child: ClipRRect(
+        borderRadius: radius,
+        child: Image.asset(
+          assetPath,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+        ),
       ),
     );
   }

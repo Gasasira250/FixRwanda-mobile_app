@@ -5,11 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Install FixRwanda</title>
   <meta name="theme-color" content="#0052B4">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="FixRwanda">
   <style>
     :root {
       --blue: #0052B4;
       --yellow: #FAD201;
-      --green: #208A42;
       --bg: #F8FAFC;
     }
     body {
@@ -61,6 +62,9 @@
       margin-top: 12px;
     }
     ol { padding-left: 20px; color: #4B5563; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .hint { font-size: 13px; margin-top: 16px; }
   </style>
 </head>
 <body>
@@ -68,18 +72,48 @@
     <div class="card">
       <div class="mark">🔧</div>
       <h1>Install FixRwanda</h1>
-      <p>Kigali marketplace for verified professionals. Use this page on an Android phone.</p>
-      <a class="btn" href="https://github.com/Gasasira250/FixRwanda-mobile_app/releases/latest/download/FixRwanda.apk">
-        Download and install
-      </a>
-      <a class="btn secondary" href="./">Open in the browser</a>
-      <p><strong>On Android</strong></p>
-      <ol>
-        <li>Tap Download and install.</li>
-        <li>Allow Chrome to install unknown apps if asked.</li>
-        <li>Open the FixRwanda file to install.</li>
-      </ol>
+      <p>Kigali marketplace for verified professionals. This link works on iPhone and Android.</p>
+
+      <div id="ios" class="panel">
+        <a class="btn" href="./">Open FixRwanda</a>
+        <p><strong>Add it to your iPhone home screen</strong></p>
+        <ol>
+          <li>Open this page in Safari.</li>
+          <li>Tap Open FixRwanda.</li>
+          <li>Tap the Share button.</li>
+          <li>Tap Add to Home Screen, then Add.</li>
+        </ol>
+        <p class="hint">Apple does not allow installing this Android file on iPhone. The home-screen icon opens FixRwanda like an app.</p>
+      </div>
+
+      <div id="android" class="panel">
+        <a class="btn" href="https://github.com/Gasasira250/FixRwanda-mobile_app/releases/latest/download/FixRwanda.apk">
+          Download and install
+        </a>
+        <a class="btn secondary" href="./">Open in the browser</a>
+        <p><strong>On Android</strong></p>
+        <ol>
+          <li>Tap Download and install.</li>
+          <li>Allow Chrome to install unknown apps if asked.</li>
+          <li>Open the FixRwanda file to install.</li>
+        </ol>
+      </div>
+
+      <div id="other" class="panel">
+        <a class="btn" href="./">Open FixRwanda</a>
+        <a class="btn secondary" href="https://github.com/Gasasira250/FixRwanda-mobile_app/releases/latest/download/FixRwanda.apk">
+          Download the Android app
+        </a>
+        <p class="hint">iPhone: open in Safari, then Share → Add to Home Screen. Android: download the app file and install it.</p>
+      </div>
     </div>
   </div>
+  <script>
+    var ua = navigator.userAgent || '';
+    var iOS = /iPhone|iPad|iPod/i.test(ua);
+    var android = /Android/i.test(ua);
+    var id = iOS ? 'ios' : android ? 'android' : 'other';
+    document.getElementById(id).classList.add('active');
+  </script>
 </body>
 </html>

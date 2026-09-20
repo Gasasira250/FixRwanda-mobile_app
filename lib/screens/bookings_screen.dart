@@ -6,8 +6,10 @@ import '../models/booking.dart';
 import '../models/escrow.dart';
 import '../models/payment.dart';
 import '../state/marketplace_controller.dart';
+import '../theme/app_theme.dart';
 import '../utils/money.dart';
 import '../widgets/app_states.dart';
+import '../widgets/market_design.dart';
 
 class BookingsScreen extends StatelessWidget {
   const BookingsScreen({super.key});
@@ -19,50 +21,30 @@ class BookingsScreen extends StatelessWidget {
       return const ProviderJobsScreen();
     }
     final bookings = controller.bookings;
-    return SafeArea(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-            child: Text(
-              'Your jobs',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ),
-          Expanded(
-            child: bookings.isEmpty
-                ? const EmptyState(
-                    title: 'No jobs yet',
-                    message: 'Request a technician from Home. Payment stays in escrow until the technician enters the 4-digit code on your screen.',
-                    icon: Icons.calendar_month_outlined,
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: bookings.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final booking = bookings[index];
-                      return Material(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        child: ListTile(
-                          title: Text(booking.serviceName),
-                          subtitle: Text(
-                            '${booking.professionalName} · ${Money.rwf(booking.servicePrice)}',
-                          ),
-                          trailing: StatusPill.booking(booking.status),
-                          onTap: () => Navigator.of(context).pushNamed(
-                            '/booking',
-                            arguments: booking.id,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _JobsHero(
+          title: 'Your jobs',
+          subtitle: 'Escrow stays held until the technician enters your 4-digit code.',
+        ),
+        Expanded(
+          child: bookings.isEmpty
+              ? const EmptyState(
+                  title: 'No jobs yet',
+                  message: 'Request a technician from Home. Payment stays in escrow until the technician enters the 4-digit code on your screen.',
+                  icon: Icons.calendar_month_outlined,
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+                  itemCount: bookings.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    return JobSummaryCard(booking: bookings[index]);
+                  },
+                ),
+        ),
+      ],
     );
   }
 }
@@ -76,38 +58,33 @@ class ProviderJobsScreen extends StatelessWidget {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        body: SafeArea(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-                child: Text(
-                  'Job board',
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-              ),
-              const TabBar(
-                tabs: [
-                  Tab(text: 'Open in my district'),
-                  Tab(text: 'My jobs'),
+        body: Column(
+          children: [
+            const _JobsHero(
+              title: 'Job board',
+              subtitle: 'Open offers in your district, then jobs you have accepted.',
+            ),
+            const TabBar(
+              tabs: [
+                Tab(text: 'Open in my district'),
+                Tab(text: 'My jobs'),
+              ],
+            ),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  _JobList(
+                    bookings: controller.openJobs,
+                    empty: 'No open jobs in your district right now.',
+                  ),
+                  _JobList(
+                    bookings: controller.assignedJobs,
+                    empty: 'You have not accepted a job yet.',
+                  ),
                 ],
               ),
-              Expanded(
-                child: TabBarView(
-                  children: [
-                    _JobList(
-                      bookings: controller.openJobs,
-                      empty: 'No open jobs in your district right now.',
-                    ),
-                    _JobList(
-                      bookings: controller.assignedJobs,
-                      empty: 'You have not accepted a job yet.',
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -125,22 +102,119 @@ class _JobList extends StatelessWidget {
       return EmptyState(title: 'Nothing here', message: empty);
     }
     return ListView.separated(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
       itemCount: bookings.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        final booking = bookings[index];
-        return Material(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          child: ListTile(
-            title: Text(booking.serviceName),
-            subtitle: Text('${booking.district ?? booking.sector ?? 'Kigali'} · ${Money.rwf(booking.servicePrice)}'),
-            trailing: StatusPill.booking(booking.status),
-            onTap: () => Navigator.of(context).pushNamed('/booking', arguments: booking.id),
-          ),
-        );
+        return JobSummaryCard(booking: bookings[index]);
       },
+    );
+  }
+}
+
+class _JobsHero extends StatelessWidget {
+  const _JobsHero({required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppTheme.primaryColor, AppTheme.heroNavy],
+        ),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 22),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppTheme.secondaryColor,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                subtitle,
+                style: const TextStyle(color: Colors.white70, height: 1.35),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class JobSummaryCard extends StatelessWidget {
+  const JobSummaryCard({super.key, required this.booking});
+
+  final Booking booking;
+
+  @override
+  Widget build(BuildContext context) {
+    final tint = CategoryLook.tint(booking.category);
+    return SurfaceCard(
+      accent: tint,
+      onTap: () => Navigator.of(context).pushNamed(
+        '/booking',
+        arguments: booking.id,
+      ),
+      child: Row(
+        children: [
+          IconWell(icon: CategoryLook.icon(booking.category), color: tint),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  booking.serviceName,
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${booking.professionalName} · ${booking.district ?? booking.sector ?? 'Kigali'}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 8),
+                StatusPill.booking(booking.status),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            Money.rwf(booking.servicePrice),
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              color: AppTheme.primaryColor,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

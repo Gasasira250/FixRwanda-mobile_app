@@ -10,6 +10,15 @@ class AppTheme {
   static const Color canvas = Color(0xFFEFEFEF);
   static const Color textColor = Color(0xFF1A1A1A);
   static const Color mutedTextColor = Color(0xFF6B7280);
+  static const Color heroNavy = Color(0xFF023E8A);
+
+  static List<BoxShadow> get cardShadow => [
+        BoxShadow(
+          color: const Color(0xFF0052B4).withValues(alpha: 0.08),
+          blurRadius: 18,
+          offset: const Offset(0, 8),
+        ),
+      ];
 
   static ThemeData lightTheme = ThemeData(
     useMaterial3: true,
@@ -20,6 +29,30 @@ class AppTheme {
       secondary: secondaryColor,
     ),
     scaffoldBackgroundColor: backgroundColor,
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: Colors.white,
+      elevation: 8,
+      height: 72,
+      indicatorColor: primaryColor.withValues(alpha: 0.12),
+      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+        return TextStyle(
+          fontSize: 12,
+          fontWeight: states.contains(WidgetState.selected)
+              ? FontWeight.w700
+              : FontWeight.w500,
+          color: states.contains(WidgetState.selected)
+              ? primaryColor
+              : mutedTextColor,
+        );
+      }),
+      iconTheme: WidgetStateProperty.resolveWith((states) {
+        return IconThemeData(
+          color: states.contains(WidgetState.selected)
+              ? primaryColor
+              : mutedTextColor,
+        );
+      }),
+    ),
     appBarTheme: const AppBarTheme(
       centerTitle: false,
       elevation: 0,
